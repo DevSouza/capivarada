@@ -21,7 +21,15 @@ export function SiteFooter() {
       <a className="underline" href="https://creativecommons.org/licenses/by/3.0/deed.pt-br">
         CC BY 3.0
       </a>
-      , recolorida e recortada). As classificações são aproximações próprias, sem vínculo com nenhum site de xadrez.
+      , recolorida e recortada). Sons “SFX” de{" "}
+      <a className="underline" href="https://github.com/lichess-org/lila/tree/3e5aeef9b54c9a3a6637b57650420f67da26f57e/public/sound/sfx">
+        Enigmahack, do Lichess
+      </a>{" "}
+      (
+      <a className="underline" href="/sounds/sfx/LICENSE.txt">
+        AGPL-3.0+
+      </a>
+      ). As classificações são aproximações próprias, sem vínculo com nenhum site de xadrez.
     </footer>
   );
 }

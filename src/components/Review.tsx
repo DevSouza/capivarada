@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { pgnFileName } from "@/lib/savedGame";
+import { loadMuted, playSounds, preloadSounds, saveMuted, soundsOf } from "@/lib/sound";
 import type { GameReview } from "@/lib/types";
 import { BoardFrame } from "./BoardFrame";
 import { Controls, NAV_KEYS, step } from "./Controls";
@@ -10,6 +11,7 @@ import { ExportPgn } from "./ExportPgn";
 import { FlipButton } from "./FlipButton";
 import { MoveDetail } from "./MoveDetail";
 import { MoveList } from "./MoveList";
+import { SoundButton } from "./SoundButton";
 import { Summary } from "./Summary";
 
 const AUTOPLAY_MS = 2000;
@@ -28,6 +30,20 @@ export function Review({ review, notice, onBack }: Props) {
 
   const [autoplay, setAutoplay] = useState(false);
   const playing = autoplay && index < last;
+
+  const [muted, setMuted] = useState(loadMuted);
+  const soundedIndex = useRef(0);
+  useEffect(() => {
+    if (!muted) preloadSounds();
+  }, [muted]);
+  useEffect(() => {
+    const from = soundedIndex.current;
+    if (from === index) return;
+    soundedIndex.current = index;
+    if (muted || index === 0) return;
+    // Para trás, a peça só volta: não há captura nem xeque.
+    void playSounds(index > from ? soundsOf(review.plies[index - 1].san) : ["move"]);
+  }, [index, muted, review]);
 
   useEffect(() => {
     if (!playing) return;
@@ -60,7 +76,20 @@ export function Review({ review, notice, onBack }: Props) {
     if (!playing) setIndex(index === last ? 1 : index + 1);
   }
 
-  const flip = () => setFlipped((value) => !value);
+  function toggleMuted() {
+    saveMuted(!muted);
+    setMuted(!muted);
+    // Confirma na hora que o som voltou.
+    if (muted) void playSounds(["move"]);
+  }
+
+  const actions = (
+    <>
+      <ExportPgn iconOnly pgn={review.game.pgn} fileName={pgnFileName(review.game.headers)} />
+      <FlipButton onClick={() => setFlipped((value) => !value)} />
+      <SoundButton muted={muted} onClick={toggleMuted} />
+    </>
+  );
 
   const controls = (
     <Controls
@@ -76,10 +105,7 @@ export function Review({ review, notice, onBack }: Props) {
     <div className="flex flex-col gap-4">
       {/* Em telas estreitas a coluna do título fica abaixo do tabuleiro; as ações continuam no topo. */}
       <div className="flex items-center justify-end gap-2 lg:hidden">
-        <div className="flex gap-2 sm:hidden">
-          <ExportPgn iconOnly pgn={review.game.pgn} fileName={pgnFileName(review.game.headers)} />
-          <FlipButton onClick={flip} />
-        </div>
+        <div className="flex gap-2 sm:hidden">{actions}</div>
         <BackButton onClick={onBack} />
       </div>
 
@@ -91,7 +117,7 @@ export function Review({ review, notice, onBack }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="mx-auto flex w-full max-w-[min(100%,calc(100vh-5.25rem))] min-w-0 flex-col gap-3 max-lg:max-w-xl">
-          <BoardFrame review={review} index={index} flipped={flipped} onFlip={flip} />
+          <BoardFrame review={review} index={index} flipped={flipped} actions={actions} />
           {index > 0 && <div className="lg:hidden">{controls}</div>}
         </div>
 

@@ -1,12 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { gameResult } from "@/lib/players";
-import { pgnFileName } from "@/lib/savedGame";
 import type { Color, GameReview } from "@/lib/types";
 import { Board } from "./Board";
 import { EvalBar } from "./EvalBar";
-import { ExportPgn } from "./ExportPgn";
-import { FlipButton } from "./FlipButton";
 import { PlayerStrip } from "./PlayerStrip";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -16,11 +14,12 @@ interface Props {
   review: GameReview;
   index: number;
   flipped: boolean;
-  onFlip: () => void;
+  /** Botões de ação ao lado do tabuleiro. */
+  actions: ReactNode;
 }
 
 /** Tabuleiro com barra de avaliação, coordenadas externas e os dois jogadores. */
-export function BoardFrame({ review, index, flipped, onFlip }: Props) {
+export function BoardFrame({ review, index, flipped, actions }: Props) {
   const ply = index > 0 ? review.plies[index - 1] : null;
   const fen = ply ? ply.fenAfter : review.game.startFen;
   const [top, bottom]: Color[] = flipped ? ["w", "b"] : ["b", "w"];
@@ -47,11 +46,8 @@ export function BoardFrame({ review, index, flipped, onFlip }: Props) {
         flipped={flipped}
         result={index === review.plies.length ? gameResult(review) : null}
       />
-      {/* No celular, ficam no cabeçalho para não encolher o tabuleiro. */}
-      <div className="flex flex-col gap-2 pl-2 max-sm:hidden">
-        <ExportPgn iconOnly pgn={review.game.pgn} fileName={pgnFileName(review.game.headers)} />
-        <FlipButton onClick={onFlip} />
-      </div>
+      {/* No celular, ficam no topo da página para não encolher o tabuleiro. */}
+      <div className="flex flex-col gap-2 pl-2 max-sm:hidden">{actions}</div>
 
       <div aria-hidden className="col-start-3 grid h-6 grid-cols-8 text-xs font-medium text-muted">
         {ordered(FILES).map((file) => (
