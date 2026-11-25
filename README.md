@@ -39,7 +39,8 @@ motor sempre vale 100.
 ## Licenças
 
 Este projeto é GPL-3.0 ou posterior (`LICENSE`). Materiais de terceiros mantêm as
-suas licenças: o Stockfish.js 19 é GPL-3.0 (`public/engine/COPYING.txt`). As aberturas vêm de
+suas licenças: o Stockfish.js 19 é GPL-3.0 (`public/engine/COPYING.txt`). O chess.js, de
+Jeff Hlywa, é BSD-2-Clause (`public/licenses/chess.js.txt`). As aberturas vêm de
 `lichess-org/chess-openings` (CC0). A capivara é de Caro Asercion
 (game-icons.net), CC BY 3.0, recolorida e recortada. Os sons são o conjunto "SFX"
 do Lichess, de Enigmahack, AGPL-3.0 ou posterior (`public/sounds/sfx`).

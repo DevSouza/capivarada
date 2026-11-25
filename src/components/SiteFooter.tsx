@@ -9,6 +9,14 @@ export function SiteFooter() {
       <a className="underline" href="/engine/COPYING.txt">
         GPL-3.0
       </a>
+      ). Regras do xadrez com{" "}
+      <a className="underline" href="https://github.com/jhlywa/chess.js">
+        chess.js
+      </a>{" "}
+      (
+      <a className="underline" href="/licenses/chess.js.txt">
+        BSD-2-Clause
+      </a>
       ). Aberturas de{" "}
       <a className="underline" href="https://github.com/lichess-org/chess-openings">
         lichess-org/chess-openings
