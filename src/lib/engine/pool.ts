@@ -7,8 +7,23 @@ export class AnalysisCancelled extends Error {
   }
 }
 
+const MAX_WORKERS = 12;
+/** Celular e tablet: menos memória e mais calor. */
+const MAX_WORKERS_MOBILE = 4;
+
+/**
+ * Quantas posições analisar ao mesmo tempo. Só muda a velocidade: cada busca tem
+ * limite próprio de nós e começa com o hash limpo, então o resultado é o mesmo.
+ */
+export function poolSize(threads: number, mobile: boolean): number {
+  // Deixa uma thread para a página continuar respondendo.
+  return Math.max(1, Math.min(mobile ? MAX_WORKERS_MOBILE : MAX_WORKERS, threads - 1));
+}
+
 export function defaultPoolSize(): number {
-  return Math.min(6, Math.max(1, (navigator.hardwareConcurrency || 2) - 1));
+  // Só toque, sem mouse: notebook com tela de toque continua contando como computador.
+  const mobile = window.matchMedia("(pointer: coarse)").matches && !window.matchMedia("(any-pointer: fine)").matches;
+  return poolSize(navigator.hardwareConcurrency || 2, mobile);
 }
 
 export class EnginePool {
