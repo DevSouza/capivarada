@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { Brand } from "@/components/Brand";
+import { Calibration } from "@/components/landing/Calibration";
 import { Descent } from "@/components/landing/Descent";
 import { HeroBoard } from "@/components/landing/HeroBoard";
 import { HowItWorks } from "@/components/landing/HowItWorks";
@@ -47,6 +48,7 @@ export default function Landing() {
 
         <Descent />
         <HowItWorks />
+        <Calibration />
         <River />
       </main>
       <SiteFooter />

@@ -4,8 +4,8 @@ import type { Color, Score } from "../types";
 // https://github.com/lichess-org/lila/blob/master/modules/tree/src/main/Advice.scala
 
 /** Em centipeões: com tanta vantagem (ou desvantagem), o mate muda pouco. */
-const DECIDED = 700;
-const OVERWHELMING = 999;
+export const DECIDED = 700;
+export const OVERWHELMING = 999;
 
 export type MateJudgement = "inaccuracy" | "mistake" | "blunder";
 
