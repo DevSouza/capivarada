@@ -5,7 +5,7 @@ import { gameAccuracy, moveAccuracy, volatilityWeights } from "./accuracy";
 import { analyzeGame, matchOpening, type SearchAll } from "./analyze";
 import { classify, classifyByLoss, type ClassifyInput } from "./classify";
 import { judgeMate } from "./mate";
-import { findSacrifice, isRoutineCapture, sacrificeStands } from "./sacrifice";
+import { isRoutineCapture, isSacrifice } from "./sacrifice";
 import { expectedPoints, winPercent } from "./winprob";
 
 const cp = (value: number): Score => ({ kind: "cp", cp: value });
@@ -77,6 +77,7 @@ describe("classify", () => {
   const base: ClassifyInput = {
     isBook: false, legalMoves: 30, isBest: true, expectedBefore: 0.6, expectedAfter: 0.6, expectedSecond: 0.58,
     loss: 0, opponentLoss: 0, mateJudgement: null, isRoutineCapture: false, isSacrifice: false,
+    otherMoveMates: false,
   };
   const run = (changes: Partial<ClassifyInput>) => classify({ ...base, ...changes });
 
@@ -86,12 +87,14 @@ describe("classify", () => {
     expect(run({ legalMoves: 1, isBest: false, expectedSecond: null })).toBe("forced");
   });
 
-  it("brilhante exige sacrifício, posição boa e não estar ganhando sem ele", () => {
+  it("brilhante exige sacrifício correto, necessário e posição não perdida", () => {
     expect(run({ isSacrifice: true })).toBe("brilliant");
-    expect(run({ isSacrifice: true, isBest: false, loss: 0.01, expectedAfter: 0.59 })).toBe("brilliant");
+    expect(run({ isSacrifice: true, isBest: false, loss: 0.02, expectedAfter: 0.58 })).toBe("brilliant");
     expect(run({ isSacrifice: true, isBest: false, loss: 0.04, expectedAfter: 0.56 })).toBe("good");
     expect(run({ isSacrifice: true, expectedBefore: 0.3, expectedAfter: 0.3, expectedSecond: 0.25 })).toBe("best");
-    expect(run({ isSacrifice: true, expectedBefore: 1, expectedAfter: 1, expectedSecond: 0.95 })).toBe("best");
+    // Já ganhar sem ele não impede; só um mate forçado disponível.
+    expect(run({ isSacrifice: true, expectedBefore: 0.95, expectedAfter: 0.95, expectedSecond: 0.94 })).toBe("brilliant");
+    expect(run({ isSacrifice: true, otherMoveMates: true, expectedBefore: 1, expectedAfter: 1, expectedSecond: 1 })).toBe("best");
   });
 
   it("ótimo exige segunda opção bem pior e não ser captura rotineira", () => {
@@ -144,6 +147,7 @@ describe("mate perdido ou permitido", () => {
     const input: ClassifyInput = {
       isBook: false, legalMoves: 30, isBest: false, expectedBefore: 1, expectedAfter: 0.96, expectedSecond: 0.96,
       loss: 0.04, opponentLoss: 0.3, mateJudgement: "mistake", isRoutineCapture: false, isSacrifice: false,
+      otherMoveMates: false,
     };
     expect(classify(input)).toBe("mistake");
     expect(classify({ ...input, loss: 0.5, expectedAfter: 0.5, mateJudgement: "blunder" })).toBe("blunder");
@@ -155,28 +159,26 @@ describe("mate perdido ou permitido", () => {
 describe("sacrifícios", () => {
   const opera = "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 1 16";
 
-  it("reconhece o sacrifício de dama da Partida da Ópera", () => {
-    expect(findSacrifice(opera, "b3b8")).toBe("d7b8");
-    expect(sacrificeStands(opera, "b3b8", ["d7b8", "d1d8"])).toBe(true);
+  it("reconhece os sacrifícios da Partida da Ópera", () => {
+    expect(isSacrifice(opera, "b3b8")).toBe(true);
+    // Torre por cavalo, mesmo com o material voltando depois.
+    expect(isSacrifice("3rkb1r/p2nqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR3R w k - 2 13", "d1d7")).toBe(true);
   });
 
   it("troca de damas não é sacrifício", () => {
-    expect(findSacrifice("3qk3/8/8/8/8/8/8/3QK3 w - - 0 1", "d1d8")).toBeNull();
+    expect(isSacrifice("3qk3/8/8/8/8/8/8/3QK3 w - - 0 1", "d1d8")).toBe(false);
   });
 
   it("peça já perdida não é sacrifício", () => {
-    expect(findSacrifice("7N/6k1/8/8/8/8/8/K7 w - - 0 1", "a1a2")).toBeNull();
+    expect(isSacrifice("7N/6k1/8/8/8/8/8/K7 w - - 0 1", "a1a2")).toBe(false);
   });
 
   it("entregar peão não é sacrifício", () => {
-    expect(findSacrifice("4k3/8/8/3p4/8/4P3/8/4K3 w - - 0 1", "e3e4")).toBeNull();
+    expect(isSacrifice("4k3/8/8/3p4/8/4P3/8/4K3 w - - 0 1", "e3e4")).toBe(false);
   });
 
-  it("não vale quando o material volta na resposta", () => {
-    // Cavalo entregue em d5, mas a dama que captura é capturada em seguida.
-    const fen = "3qk3/8/8/8/8/4N3/8/3RK3 w - - 0 1";
-    expect(sacrificeStands(fen, "e3d5", ["d8d5", "d1d5"])).toBe(false);
-    expect(sacrificeStands(fen, "e3d5", ["d8d5", "e1e2"])).toBe(true);
+  it("peça defendida por outra não é sacrifício", () => {
+    expect(isSacrifice("3qk3/8/8/8/8/4N3/8/3RK3 w - - 0 1", "e3d5")).toBe(false);
   });
 
   it("identifica recaptura e captura de peça solta", () => {
@@ -223,21 +225,15 @@ describe("analyzeGame", () => {
     expect(withBook.plies.map((ply) => ply.classification)).toEqual(["book", "book", "blunder", "great"]);
   });
 
-  it("confirma o sacrifício com uma busca extra", async () => {
+  it("dá Brilhante ao sacrifício que leva ao mate, se não havia outro mate", async () => {
     const game = parsePgn('[SetUp "1"]\n[FEN "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 1 16"]\n\n16. Qb8+ *');
     const win: Score = { kind: "mate", mate: 2, winner: "w" };
-    let calls = 0;
-    const searchAll: SearchAll = async (jobs) => {
-      calls++;
-      if (jobs[0].searchMoves) {
-        expect(jobs).toMatchObject([{ turn: "b", searchMoves: ["d7b8"], moves: ["b3b8"], multiPv: 1 }]);
-        return [{ score: win, depth: 5, lines: [{ move: "d7b8", pv: ["d7b8", "d1d8"], score: win }] }];
-      }
-      return [evalOf(win, ["b3b8", win], ["b3e6", cp(100)]), evalOf(win, ["d7b8", win])];
+    const classifyWith = async (second: Score) => {
+      const searchAll: SearchAll = async () => [evalOf(win, ["b3b8", win], ["b3e6", second]), evalOf(win, ["d7b8", win])];
+      return (await analyzeGame(game, searchAll, {})).plies[0].classification;
     };
-    const review = await analyzeGame(game, searchAll, {});
-    expect(calls).toBe(2);
-    expect(review.plies[0].classification).toBe("brilliant");
+    expect(await classifyWith(cp(100))).toBe("brilliant");
+    expect(await classifyWith({ ...win, mate: 5 })).toBe("best");
   });
 
   it("não dá Brilhante quando a busca posterior mostra que o lance perde", async () => {

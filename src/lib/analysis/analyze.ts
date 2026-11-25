@@ -12,7 +12,7 @@ import {
 import { gameAccuracy, moveAccuracy } from "./accuracy";
 import { canBeBrilliant, canBeGreat, classify, type ClassifyInput } from "./classify";
 import { judgeMate } from "./mate";
-import { findSacrifice, isRoutineCapture, sacrificeStands } from "./sacrifice";
+import { isRoutineCapture, isSacrifice } from "./sacrifice";
 import { BOOK_MAX_LOSS } from "./thresholds";
 import { expectedPoints, winPercent } from "./winprob";
 
@@ -21,7 +21,6 @@ export interface SearchJob {
   moves: string[];
   turn: Color;
   multiPv: number;
-  searchMoves?: string[];
 }
 
 /** Linhas por posição: a classificação usa as duas primeiras; a tela mostra todas. */
@@ -125,11 +124,13 @@ export async function analyzeGame(
       mateJudgement: judgeMate(before.score, after.score, ply.color),
       isRoutineCapture: false,
       isSacrifice: false,
+      otherMoveMates: before.lines.some(
+        ({ move, score }) => move !== ply.uci && score.kind === "mate" && score.winner === ply.color,
+      ),
     });
   });
 
   // 2ª passada: verificações caras, só nos candidatos.
-  const acceptances: { index: number; capture: string }[] = [];
   game.plies.forEach((ply, i) => {
     const input = inputs[i];
     if (canBeGreat(input)) {
@@ -137,30 +138,8 @@ export async function analyzeGame(
       const recaptureSquare = previous?.san.includes("x") ? previous.to : null;
       input.isRoutineCapture = isRoutineCapture(ply.fenBefore, ply.uci, recaptureSquare);
     }
-    if (canBeBrilliant(input)) {
-      const capture = findSacrifice(ply.fenBefore, ply.uci);
-      if (capture) acceptances.push({ index: i, capture });
-    }
+    if (canBeBrilliant(input)) input.isSacrifice = isSacrifice(ply.fenBefore, ply.uci);
   });
-
-  if (acceptances.length > 0) {
-    const ucis = game.plies.map((ply) => ply.uci);
-    const results = await searchAll(
-      acceptances.map(({ index, capture }) => ({
-        startFen: game.startFen,
-        moves: ucis.slice(0, index + 1),
-        turn: game.plies[index].color === "w" ? "b" : "w",
-        multiPv: 1,
-        searchMoves: [capture],
-      })),
-    );
-    acceptances.forEach(({ index }, i) => {
-      const ply = game.plies[index];
-      const { score, lines } = results[i];
-      const mates = score.kind === "mate" && score.winner === ply.color;
-      inputs[index].isSacrifice = mates || sacrificeStands(ply.fenBefore, ply.uci, lines[0]?.pv ?? []);
-    });
-  }
 
   const plies: ReviewedPly[] = game.plies.map((ply, i) => ({
     ...ply,

@@ -6,7 +6,7 @@ import type { Classification, GameReview, ParsedGame } from "./types";
  * Aumente quando uma mudança na análise (limiares, fórmulas, motor) deixar as
  * análises salvas desatualizadas: elas passam a ser refeitas ao abrir.
  */
-export const ANALYSIS_VERSION = 7;
+export const ANALYSIS_VERSION = 9;
 
 /** Formato de SavedGame; registros antigos são refeitos a partir do PGN. */
 export const GAME_SCHEMA = 2;

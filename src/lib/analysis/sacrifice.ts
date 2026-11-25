@@ -29,35 +29,26 @@ function captureValue(chess: Chess, capture: Move): number {
 }
 
 /** Maior ganho de material de quem está na vez capturando uma peça (não peão). */
-function bestPieceCapture(fen: string): { gain: number; capture: string } | null {
+function bestPieceCapture(fen: string): number {
   const chess = new Chess(fen);
-  let best: { gain: number; capture: string } | null = null;
+  let best = 0;
   for (const move of chess.moves({ verbose: true })) {
     if (!move.captured || move.captured === "p") continue;
-    const gain = captureValue(chess, move);
-    if (gain > 0 && (!best || gain > best.gain)) best = { gain, capture: move.lan };
+    best = Math.max(best, captureValue(chess, move));
   }
   return best;
 }
 
-function netAfter(move: Move): { net: number; capture: string | null } {
-  const threat = bestPieceCapture(move.after);
-  return { net: moveGain(move) - (threat?.gain ?? 0), capture: threat?.capture ?? null };
-}
+/** Saldo do lance: o que ele ganha menos o que o adversário pode ganhar em seguida. */
+const netAfter = (move: Move) => moveGain(move) - bestPieceCapture(move.after);
 
-/**
- * Se o lance entrega material que outro lance legal não entregaria, devolve a
- * captura com que o adversário aceita o sacrifício.
- */
-export function findSacrifice(fenBefore: string, uci: string): string | null {
+/** Se o lance deixa o adversário ganhar material que outro lance legal não deixaria. */
+export function isSacrifice(fenBefore: string, uci: string): boolean {
   const moves = new Chess(fenBefore).moves({ verbose: true });
   const played = moves.find((move) => move.lan === uci);
-  if (!played) return null;
-  const { net, capture } = netAfter(played);
-  if (net > BRILLIANT.maxNetMaterial || !capture) return null;
+  if (!played || netAfter(played) > BRILLIANT.maxNetMaterial) return false;
   // Se todo lance perde material, a peça já estava perdida: não é escolha.
-  const avoidable = moves.some((move) => move.lan !== uci && netAfter(move).net > BRILLIANT.maxNetMaterial);
-  return avoidable ? capture : null;
+  return moves.some((move) => move.lan !== uci && netAfter(move) > BRILLIANT.maxNetMaterial);
 }
 
 export function materialBalance(chess: Chess, color: Color): number {
@@ -68,33 +59,6 @@ export function materialBalance(chess: Chess, color: Color): number {
     }
   }
   return balance;
-}
-
-/**
- * Confirma o sacrifício na linha em que o adversário aceita: o material não
- * pode voltar já na resposta (nem nas trocas em seguida na mesma casa).
- */
-export function sacrificeStands(fenBefore: string, uci: string, acceptedLine: string[]): boolean {
-  const chess = new Chess(fenBefore);
-  const color = chess.turn();
-  const before = materialBalance(chess, color);
-  let exchangeSquare: string | null = null;
-  try {
-    chess.move(uci);
-    for (let i = 0; i < acceptedLine.length; i++) {
-      // i = 0: aceitação; i = 1: resposta; depois só recapturas na casa da resposta.
-      if (i >= 2 && acceptedLine[i].slice(2, 4) !== exchangeSquare) break;
-      const played = chess.move(acceptedLine[i]);
-      if (i >= 1) {
-        if (!played.captured) break;
-        exchangeSquare = played.to;
-      }
-    }
-  } catch {
-    // Linha truncada: avalia o que deu para jogar.
-  }
-  if (chess.isCheckmate() && chess.turn() !== color) return true;
-  return materialBalance(chess, color) - before <= BRILLIANT.maxNetMaterial;
 }
 
 /** Recaptura na mesma casa, ou captura de peça solta. */

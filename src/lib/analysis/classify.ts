@@ -18,18 +18,19 @@ export interface ClassifyInput {
   mateJudgement: MateJudgement | null;
   isRoutineCapture: boolean;
   isSacrifice: boolean;
+  /** Outro lance dava mate forçado: o sacrifício era desnecessário. */
+  otherMoveMates: boolean;
 }
 
 /** Condições de Brilhante, fora o sacrifício em si (que é caro de verificar). */
 export function canBeBrilliant(input: ClassifyInput): boolean {
-  const alternative = input.isBest ? input.expectedSecond : input.expectedBefore;
   return (
     !input.isBook &&
     input.legalMoves > 1 &&
+    input.mateJudgement === null &&
+    !input.otherMoveMates &&
     input.loss <= BRILLIANT.maxLoss &&
-    input.expectedAfter >= BRILLIANT.minExpectedAfter &&
-    alternative !== null &&
-    alternative < BRILLIANT.maxAlternative
+    input.expectedAfter >= BRILLIANT.minExpectedAfter
   );
 }
 

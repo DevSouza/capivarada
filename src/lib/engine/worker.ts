@@ -10,7 +10,6 @@ export interface SearchRequest {
   turn: Color;
   nodes: number;
   multiPv: number;
-  searchMoves?: string[];
 }
 
 /** Um Stockfish em um Web Worker; executa uma busca por vez. */
@@ -91,10 +90,8 @@ export class EngineWorker {
 
     const collector = new SearchCollector(request.turn);
     const moves = request.moves.length ? ` moves ${request.moves.join(" ")}` : "";
-    // "searchmoves" consome o resto da linha, então vem por último.
-    const only = request.searchMoves?.length ? ` searchmoves ${request.searchMoves.join(" ")}` : "";
     return this.run(
-      [`position fen ${request.startFen}${moves}`, `go nodes ${request.nodes}${only}`],
+      [`position fen ${request.startFen}${moves}`, `go nodes ${request.nodes}`],
       (line) => {
         collector.add(line);
         const best = line.match(/^bestmove (\S+)/);

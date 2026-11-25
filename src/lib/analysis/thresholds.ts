@@ -12,10 +12,9 @@ export const LOSS = {
 
 export const BRILLIANT = {
   maxLoss: 0.02,
+  /** Um pouco pior, mas não perdido. */
   minExpectedAfter: 0.45,
-  /** Se a alternativa já ganhava assim, o sacrifício era desnecessário. */
-  maxAlternative: 0.9,
-  /** Saldo de material (em peões) a partir do qual conta como sacrifício. */
+  /** Saldo do que o adversário pode ganhar (em peões): uma peça menor por um peão. */
   maxNetMaterial: -2,
 } as const;
 
