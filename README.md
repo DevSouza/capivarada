@@ -1,6 +1,6 @@
-# Análise de partidas de xadrez
+# Capivarada
 
-Cole um PGN e veja a precisão de cada jogador e a classificação de cada lance
+Análise de partidas de xadrez. Cole um PGN e veja a precisão de cada jogador e a classificação de cada lance
 (Brilhante, Excelente, Livro, Melhor, Bom, Imprecisão, Erro, Chance
 perdida, Capivara). Tudo roda no navegador, sem servidor.
 
@@ -11,6 +11,11 @@ perdida, Capivara). Tudo roda no navegador, sem servidor.
 - `npm run build`: site estático em `out/`
 - `npm run engine`: baixa o Stockfish para `public/engine/` (já versionado)
 - `npm run openings`: gera `public/openings.json` (já versionado)
+
+## Páginas
+
+- `/`: landing page
+- `/partidas`: lista de partidas e análise
 
 ## Partidas salvas
 
@@ -34,4 +39,5 @@ motor sempre vale 100.
 ## Licenças
 
 Stockfish.js 19 é GPL-3.0 (`public/engine/COPYING.txt`). As aberturas vêm de
-`lichess-org/chess-openings` (CC0).
+`lichess-org/chess-openings` (CC0). A capivara é de Caro Asercion
+(game-icons.net), CC BY 3.0, recolorida e recortada.

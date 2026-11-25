@@ -1,3 +1,5 @@
+"use client";
+
 import { defaultPieces } from "react-chessboard";
 import type { Color } from "@/lib/types";
 

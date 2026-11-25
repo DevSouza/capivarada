@@ -5,6 +5,7 @@ import { findOwner, joinPgns } from "@/lib/gameInfo";
 import { deleteGames, listGames, setFavorite } from "@/lib/library";
 import type { Preset } from "@/lib/review";
 import { pgnFileName, type SavedGame } from "@/lib/savedGame";
+import { Brand } from "./Brand";
 import { ExportPgn } from "./ExportPgn";
 import { GameRow } from "./GameRow";
 import { ImportDialog } from "./ImportDialog";
@@ -106,7 +107,7 @@ export function Home({ preset, error, onPresetChange, onImport, onOpen }: Props)
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Suas partidas</h1>
+        <Brand />
         <div className="flex gap-2">
           {hasFavorites && (
             <button
@@ -127,6 +128,8 @@ export function Home({ preset, error, onPresetChange, onImport, onOpen }: Props)
           </button>
         </div>
       </header>
+
+      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight">Suas partidas</h1>
 
       {[error, storageError].map(
         (message) =>

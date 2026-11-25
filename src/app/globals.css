@@ -11,6 +11,7 @@
   --color-accent: #f0b35a;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-gabarito);
 }
 
 :root {
@@ -41,6 +42,151 @@ button:not(:disabled) {
 
 .piece-move {
   animation: piece-move 400ms ease-in-out 150ms backwards;
+}
+
+/* ---------- Landing ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.75rem);
+  }
+}
+
+/* Entrada ao carregar; --i escalona. */
+.rise {
+  animation: rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) calc(var(--i, 0) * 110ms) backwards;
+}
+
+@keyframes badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  70% {
+    transform: scale(1.25);
+  }
+}
+
+.badge-pop {
+  animation: badge-pop 320ms ease-out 500ms backwards;
+}
+
+@keyframes board-shake {
+  20% {
+    transform: translateX(-5px) rotate(-0.4deg);
+  }
+  45% {
+    transform: translateX(5px) rotate(0.4deg);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+}
+
+.board-shake {
+  animation: board-shake 380ms ease-out 560ms;
+}
+
+@keyframes wave {
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+.wave {
+  animation: wave 11s linear infinite;
+}
+
+.wave-slow {
+  animation-duration: 19s;
+  animation-direction: reverse;
+}
+
+.wave-fast {
+  animation-duration: 7s;
+}
+
+@keyframes bob {
+  from {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+  to {
+    transform: translateY(7px) rotate(1.5deg);
+  }
+}
+
+.bob {
+  animation: bob 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes swim {
+  from {
+    transform: translateX(-50%) translateX(-14vw);
+  }
+  to {
+    transform: translateX(-50%) translateX(14vw);
+  }
+}
+
+.swim {
+  transform: translateX(-50%);
+  animation: swim 16s ease-in-out infinite alternate;
+}
+
+/* Animações ligadas à rolagem. Sem suporte, o conteúdo já aparece no estado final. */
+@keyframes type-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes walk {
+  from {
+    transform: translateX(-4rem);
+  }
+  to {
+    transform: translateX(24rem);
+  }
+}
+
+.draw {
+  stroke-dasharray: 1;
+}
+
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: rise linear backwards;
+    animation-timeline: view();
+    animation-range: entry 5% cover calc(22% + var(--i, 0) * 1%);
+  }
+
+  .type-in {
+    animation: type-in linear both;
+    animation-timeline: view();
+    animation-range: entry 100% cover 45%;
+  }
+
+  .draw {
+    animation: draw linear both;
+    animation-timeline: view();
+    animation-range: entry 80% cover 50%;
+  }
+
+  .walk {
+    animation: walk linear both;
+    animation-timeline: view();
+    animation-range: cover 5% cover 75%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
