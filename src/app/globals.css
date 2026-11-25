@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-ink: #10141d;
+  --color-panel: #191f2b;
+  --color-raised: #232b3a;
+  --color-line: #313b4d;
+  --color-text: #eceff4;
+  --color-soft: #b3bccb;
+  --color-muted: #8a95a8;
+  --color-accent: #f0b35a;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Peça indo da casa de origem para a de destino; --from-x e --from-y são em casas. */
+@keyframes piece-move {
+  from {
+    transform: translate(calc(var(--from-x) * 100%), calc(var(--from-y) * 100%));
+  }
+}
+
+.piece-move {
+  animation: piece-move 400ms ease-in-out 150ms backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

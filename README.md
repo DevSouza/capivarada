@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Análise de partidas de xadrez
 
-## Getting Started
+Cole um PGN e veja a precisão de cada jogador e a classificação de cada lance
+(Brilhante, Excelente, Livro, Melhor, Bom, Imprecisão, Erro, Chance
+perdida, Capivara). Tudo roda no navegador, sem servidor.
 
-First, run the development server:
+## Comandos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- `npm run dev`: desenvolvimento
+- `npm test` / `npm run lint`: testes e lint
+- `npm run build`: site estático em `out/`
+- `npm run engine`: baixa o Stockfish para `public/engine/` (já versionado)
+- `npm run openings`: gera `public/openings.json` (já versionado)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Partidas salvas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Cada partida adicionada fica no IndexedDB do navegador, com o PGN original e a
+análise (`src/lib/library.ts`). Ao mudar limiares ou fórmulas, aumente
+`ANALYSIS_VERSION` em `src/lib/savedGame.ts` para as análises antigas serem
+refeitas ao abrir.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Como classifica
 
-## Learn More
+Imprecisão, Erro e Capivara usam os cortes do Lichess (0,05, 0,10 e 0,15 pontos
+esperados perdidos); abaixo disso, é Bom. Perder ou permitir um mate forçado segue
+as regras do Lichess (`src/lib/analysis/mate.ts`). Os critérios de Brilhante,
+Excelente e Chance perdida são aproximações; os limiares ficam em
+`src/lib/analysis/thresholds.ts`. Lance único é "Forçado" e fica fora do resumo.
 
-To learn more about Next.js, take a look at the following resources:
+A precisão combina, como o Lichess, a média ponderada pela volatilidade e a média
+harmônica, na proporção 50/50, mas sem contar livro e forçados. O lance nº 1 do
+motor sempre vale 100.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Licenças
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Stockfish.js 19 é GPL-3.0 (`public/engine/COPYING.txt`). As aberturas vêm de
+`lichess-org/chess-openings` (CC0).
