@@ -24,16 +24,16 @@ export function timeControlLabel(headers: Headers): string | null {
 }
 
 const ENDINGS: [RegExp, string][] = [
-  [/checkmate/i, "Xeque-mate"],
-  [/resign/i, "Desistência"],
-  [/timeout vs|time ?out.*insufficient/i, "Tempo × material insuficiente"],
-  [/on time|time forfeit|timeout/i, "Tempo esgotado"],
+  [/checkmate|xeque-mate/i, "Xeque-mate"],
+  [/resign|desist/i, "Desistência"],
+  [/timeout vs|time ?out.*insufficient|tempo.*insuficiente/i, "Tempo × material insuficiente"],
+  [/on time|time forfeit|timeout|tempo/i, "Tempo esgotado"],
   [/abandon/i, "Abandono"],
-  [/stalemate/i, "Afogamento"],
-  [/repetition/i, "Repetição"],
-  [/agreement/i, "Acordo"],
-  [/insufficient/i, "Material insuficiente"],
-  [/50.?move/i, "Regra dos 50 lances"],
+  [/stalemate|afogamento/i, "Afogamento"],
+  [/repetition|repeti[cç]/i, "Repetição"],
+  [/agreement|acordo/i, "Acordo"],
+  [/insufficient|insuficiente/i, "Material insuficiente"],
+  [/50.?(move|lances)/i, "Regra dos 50 lances"],
 ];
 
 /** Como a partida terminou; a posição final vale mais que o cabeçalho. */
@@ -41,6 +41,7 @@ export function endingLabel(headers: Headers, finalFen: string): string | null {
   const chess = new Chess(finalFen);
   if (chess.isCheckmate()) return "Xeque-mate";
   if (chess.isStalemate()) return "Afogamento";
+  if (chess.isInsufficientMaterial()) return "Material insuficiente";
   const termination = headers.Termination ?? "";
   return ENDINGS.find(([pattern]) => pattern.test(termination))?.[1] ?? null;
 }

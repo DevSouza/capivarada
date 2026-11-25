@@ -42,6 +42,10 @@ describe("informações da partida", () => {
     expect(ending("ana won - game abandoned")).toBe("Abandono");
     expect(ending("Game drawn by repetition")).toBe("Repetição");
     expect(ending("Normal")).toBeNull();
+    expect(ending("Empate por material insuficiente")).toBe("Material insuficiente");
+    expect(ending("ana venceu por desistência")).toBe("Desistência");
+    expect(ending("beto venceu por xeque-mate")).toBe("Xeque-mate");
+    expect(endingLabel({}, "8/8/4k3/8/8/4K3/8/8 w - - 0 1")).toBe("Material insuficiente");
   });
 
   it("dá o placar de cada lado", () => {
