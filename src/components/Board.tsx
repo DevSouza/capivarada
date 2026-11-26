@@ -2,11 +2,12 @@
 
 import { Chess } from "chess.js";
 import type { ReactNode } from "react";
-import { Chessboard } from "react-chessboard";
+import { Chessboard, type Arrow } from "react-chessboard";
 import type { GameResult } from "@/lib/players";
 import type { Color, ReviewedPly } from "@/lib/types";
 import { Badge, CLASS_META } from "./Badge";
 import { ResultBadge } from "./ResultBadge";
+import { useBoardNotes } from "./useBoardNotes";
 
 interface Props {
   fen: string;
@@ -34,9 +35,17 @@ function SquareMark({ square, flipped, children }: { square: string; flipped: bo
   );
 }
 
+/** Duas setas iguais se sobreporiam com a mesma chave. */
+const isSameArrow = (a: Arrow, b: Arrow) => a.startSquare === b.startSquare && a.endSquare === b.endSquare;
+
 export function Board({ fen, ply, bestMove, flipped, result }: Props) {
+  const notes = useBoardNotes(fen);
   const highlight = ply && { backgroundColor: `${CLASS_META[ply.classification].color}99` };
   const showArrow = ply && bestMove && bestMove !== ply.uci && ply.classification !== "book";
+
+  const engineArrows: Arrow[] = showArrow
+    ? [{ startSquare: bestMove.slice(0, 2), endSquare: bestMove.slice(2, 4), color: CLASS_META.best.color }]
+    : [];
 
   const kings = result
     ? (["w", "b"] as Color[]).map((color) => ({
@@ -60,10 +69,12 @@ export function Board({ fen, ply, bestMove, flipped, result }: Props) {
           lightSquareStyle: { backgroundColor: "#e3dccd" },
           darkSquareStyle: { backgroundColor: "#7b8da6" },
           boardStyle: { borderRadius: "4px", overflow: "hidden" },
-          squareStyles: ply && highlight ? { [ply.from]: highlight, [ply.to]: highlight } : {},
-          arrows: showArrow
-            ? [{ startSquare: bestMove.slice(0, 2), endSquare: bestMove.slice(2, 4), color: CLASS_META.best.color }]
-            : [],
+          squareStyles: {
+            ...(ply && highlight && { [ply.from]: highlight, [ply.to]: highlight }),
+            ...notes.squareStyles,
+          },
+          arrows: [...engineArrows, ...notes.arrows.filter((arrow) => !engineArrows.some((own) => isSameArrow(own, arrow)))],
+          ...notes.handlers,
         }}
       />
       {ply && !kings.some(({ square }) => square === ply.to) && (
