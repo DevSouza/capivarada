@@ -10,7 +10,7 @@ export const PRESETS = {
 
 export type Preset = keyof typeof PRESETS;
 
-async function loadBook(signal: AbortSignal): Promise<OpeningBook> {
+export async function loadBook(signal: AbortSignal): Promise<OpeningBook> {
   try {
     const res = await fetch("/openings.json", { signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

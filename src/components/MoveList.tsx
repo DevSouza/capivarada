@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { formatScore, numberedMove, sanToPt, splitSan } from "@/lib/notation";
-import type { GameReview, ReviewedPly } from "@/lib/types";
-import { Badge, CLASS_META, classTextColor } from "./Badge";
-import { PieceIcon } from "./PieceIcon";
+import { formatScore, numberedMove } from "@/lib/notation";
+import type { GameReview } from "@/lib/types";
+import { Badge, CLASS_META } from "./Badge";
+import { MoveSan } from "./MoveSan";
 import { useMovePreview, type MovePreview } from "./useMovePreview";
 
 interface Props {
   review: GameReview;
-  index: number;
+  /** null fora da partida, em uma variante. */
+  index: number | null;
   flipped: boolean;
   onSelect: (index: number) => void;
 }
@@ -62,7 +63,7 @@ export function MoveList({ review, index, flipped, onSelect }: Props) {
                   className="flex h-8 items-center gap-2 rounded px-2 text-left hover:bg-raised aria-[current]:bg-line aria-[current]:font-semibold"
                 >
                   <Badge kind={review.plies[i].classification} size={20} />
-                  <Move ply={review.plies[i]} />
+                  <MoveSan ply={review.plies[i]} classification={review.plies[i].classification} />
                   <span className="ml-auto text-[0.8125rem] font-normal text-muted tabular-nums">
                     {formatScore(review.evals[i + 1].score)}
                   </span>
@@ -87,22 +88,4 @@ function toPreview(review: GameReview, i: number): MovePreview {
     label: numberedMove(ply.moveNumber, ply.color, ply.san),
     detail: CLASS_META[ply.classification].label,
   };
-}
-
-/** Lance na cor da classificação, com o ícone da peça no lugar da letra; peão não tem ícone. */
-function Move({ ply }: { ply: ReviewedPly }) {
-  const { piece, rest } = splitSan(ply.san);
-  return (
-    <>
-      <span className="sr-only">{sanToPt(ply.san)}</span>
-      <span aria-hidden className="flex items-center gap-1.5" style={{ color: classTextColor(ply.classification) }}>
-        {piece && (
-          <span className="w-5 shrink-0">
-            <PieceIcon piece={piece} color={ply.color} />
-          </span>
-        )}
-        {rest}
-      </span>
-    </>
-  );
 }

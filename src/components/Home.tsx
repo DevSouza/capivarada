@@ -18,15 +18,17 @@ export interface ImportOutcome {
 }
 
 interface Props {
+  /** Nome que o usuário disse ser o dele; null se ainda não escolheu. */
+  chosenOwner: string | null;
   preset: Preset;
   /** Falha da última análise. */
   error: string | null;
   onPresetChange: (preset: Preset) => void;
   onImport: (text: string, onProgress: (message: string) => void) => Promise<ImportOutcome>;
-  onOpen: (game: SavedGame) => void;
+  onOpen: (game: SavedGame, owner: string | null) => void;
 }
 
-export function Home({ preset, error, onPresetChange, onImport, onOpen }: Props) {
+export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onOpen }: Props) {
   const [games, setGames] = useState<SavedGame[] | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -97,7 +99,7 @@ export function Home({ preset, error, onPresetChange, onImport, onOpen }: Props)
     }
   }
 
-  const owner = findOwner(games ?? []);
+  const owner = chosenOwner ?? findOwner(games ?? []);
   const hasFavorites = games?.some((game) => game.favorite) ?? false;
   const filtering = onlyFavorites && hasFavorites;
   const visible = (games ?? []).filter((game) => !filtering || game.favorite);
@@ -192,7 +194,7 @@ export function Home({ preset, error, onPresetChange, onImport, onOpen }: Props)
                 game={game}
                 owner={owner}
                 selected={selected.has(game.id)}
-                onOpen={() => onOpen(game)}
+                onOpen={() => onOpen(game, owner)}
                 onToggleFavorite={() => toggleFavorite(game)}
                 onToggleSelected={() => toggleSelected(game.id)}
               />

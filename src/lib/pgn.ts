@@ -1,5 +1,5 @@
-import { Chess } from "chess.js";
-import type { ParsedGame } from "./types";
+import { Chess, type Move } from "chess.js";
+import type { ParsedGame, Ply } from "./types";
 
 export class PgnError extends Error {}
 
@@ -75,6 +75,21 @@ function describeError(error: unknown): string {
   return "Não consegui ler esse PGN.";
 }
 
+export function toPly(move: Move, clock: number | null): Ply {
+  return {
+    color: move.color,
+    moveNumber: Number(move.before.split(" ")[5]),
+    san: move.san,
+    uci: move.lan,
+    from: move.from,
+    to: move.to,
+    fenBefore: move.before,
+    fenAfter: move.after,
+    captured: move.captured ?? null,
+    clock,
+  };
+}
+
 export function parsePgn(text: string): ParsedGame {
   const [pgn, ...others] = splitGames(text);
   if (!pgn) throw new PgnError("Cole o PGN de uma partida.");
@@ -99,18 +114,7 @@ export function parsePgn(text: string): ParsedGame {
     pgn,
     headers: chess.getHeaders(),
     startFen: history[0].before,
-    plies: history.map((move) => ({
-      color: move.color,
-      moveNumber: Number(move.before.split(" ")[5]),
-      san: move.san,
-      uci: move.lan,
-      from: move.from,
-      to: move.to,
-      fenBefore: move.before,
-      fenAfter: move.after,
-      captured: move.captured ?? null,
-      clock: parseClock(comments.get(move.after)),
-    })),
+    plies: history.map((move) => toPly(move, parseClock(comments.get(move.after)))),
     warnings: others.length > 0 ?["O texto tem mais de uma partida; analisei só a primeira."] : [],
   };
 }

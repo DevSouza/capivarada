@@ -35,6 +35,14 @@ export function Summary({ review, onSelect }: Props) {
           </th>
           <td className="pt-1 pb-4 text-3xl font-semibold">{formatAccuracy(review.accuracy.b)}</td>
         </tr>
+        {review.opening && (
+          <tr className="border-b border-line text-center">
+            <td colSpan={3} className="px-4 py-2.5 text-sm text-soft">
+              <span className="sr-only">Abertura: </span>
+              {review.opening}
+            </td>
+          </tr>
+        )}
         {CLASSIFICATIONS.map((kind) => {
           const { label } = CLASS_META[kind];
           const first = firstMove(review, kind);
@@ -46,10 +54,10 @@ export function Summary({ review, onSelect }: Props) {
           );
           return (
             <tr key={kind} className="text-center">
-              <td className="py-0.5">
+              <td className="py-px">
                 <Count review={review} kind={kind} color="w" onSelect={onSelect} />
               </td>
-              <th scope="row" className="py-0.5 font-normal">
+              <th scope="row" className="py-px font-normal">
                 {first ? (
                   <button
                     type="button"
@@ -63,7 +71,7 @@ export function Summary({ review, onSelect }: Props) {
                   <span className="flex h-10 items-center gap-3 px-2 text-left text-muted">{name}</span>
                 )}
               </th>
-              <td className="py-0.5">
+              <td className="py-px">
                 <Count review={review} kind={kind} color="b" onSelect={onSelect} />
               </td>
             </tr>

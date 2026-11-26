@@ -1,32 +1,45 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { closeLine, fenAt, lineResult, mountLine, playMove, withLine, type Cursor } from "@/lib/line";
+import { LINE_MOVES } from "@/lib/notation";
+import { gameResult } from "@/lib/players";
+import type { Preset } from "@/lib/review";
 import { pgnFileName } from "@/lib/savedGame";
 import { loadMuted, playSounds, preloadSounds, saveMuted, soundsOf } from "@/lib/sound";
-import type { GameReview } from "@/lib/types";
+import type { EngineLine, GameReview } from "@/lib/types";
 import { BoardFrame } from "./BoardFrame";
 import { Controls, NAV_KEYS, step } from "./Controls";
 import { EvalGraph } from "./EvalGraph";
 import { ExportPgn } from "./ExportPgn";
 import { FlipButton } from "./FlipButton";
-import { MoveDetail } from "./MoveDetail";
+import { LinePanel } from "./LinePanel";
+import { MoveDetail, PendingDetail, StartDetail } from "./MoveDetail";
 import { MoveList } from "./MoveList";
 import { SoundButton } from "./SoundButton";
 import { Summary } from "./Summary";
+import { useLineReview } from "./useLineReview";
 
-const AUTOPLAY_MS = 2000;
+const AUTOPLAY_MS = 1000;
 
 interface Props {
   review: GameReview;
+  /** Profundidade da análise da partida, usada também nas variantes. */
+  preset: Preset;
   notice: string | null;
+  /** Abre com as pretas embaixo. */
+  startFlipped: boolean;
   onBack: () => void;
 }
 
-export function Review({ review, notice, onBack }: Props) {
-  const last = review.plies.length;
-  /** 0 = posição inicial; n = depois do n-ésimo lance. */
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
+export function Review({ review, preset, notice, startFlipped, onBack }: Props) {
+  const [cursor, setCursor] = useState<Cursor>({ index: 0, line: null });
+  const { index, line } = cursor;
+  /** A partida com os lances mostrados: os dela ou os da variante. */
+  const game = useMemo(() => withLine(review.game, line), [review, line]);
+  const last = game.plies.length;
+  const { known, error, retry } = useLineReview(review, preset, line);
+  const [flipped, setFlipped] = useState(startFlipped);
 
   const [autoplay, setAutoplay] = useState(false);
   const playing = autoplay && index < last;
@@ -42,38 +55,65 @@ export function Review({ review, notice, onBack }: Props) {
     soundedIndex.current = index;
     if (muted || index === 0) return;
     // Para trás, a peça só volta: não há captura nem xeque.
-    void playSounds(index > from ? soundsOf(review.plies[index - 1].san) : ["move"]);
-  }, [index, muted, review]);
+    void playSounds(index > from ? soundsOf(game.plies[index - 1].san) : ["move"]);
+  }, [index, muted, game]);
 
   useEffect(() => {
     if (!playing) return;
-    const timer = setTimeout(() => setIndex(index + 1), AUTOPLAY_MS);
+    const timer = setTimeout(() => moveTo(index + 1), AUTOPLAY_MS);
     return () => clearTimeout(timer);
   }, [playing, index]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      // Quem arrasta uma peça pelo teclado já usou a tecla.
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
       const key = NAV_KEYS.find((item) => item === event.key);
       if (!key) return;
       event.preventDefault();
       setAutoplay(false);
-      setIndex((current) => step(current, key, last));
+      setCursor((current) => ({ ...current, index: step(current.index, key, last) }));
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [last]);
 
+  /** Anda pelos lances mostrados, sem sair da variante. */
+  function moveTo(next: number) {
+    setCursor((current) => ({ ...current, index: next }));
+  }
+
   /** Escolher um lance à mão pausa a reprodução. */
   function goTo(next: number) {
     setAutoplay(false);
-    setIndex(next);
+    moveTo(next);
+  }
+
+  /** Escolher um lance da partida fecha a variante. */
+  function goToGame(next: number) {
+    setAutoplay(false);
+    setCursor({ index: next, line: null });
+  }
+
+  function play(fen: string, uci: string) {
+    setAutoplay(false);
+    setCursor((current) => playMove(review.game, current, fen, uci));
+  }
+
+  function mount(start: number, { pv }: EngineLine) {
+    setAutoplay(false);
+    setCursor((current) => mountLine(review.game, current, start, pv.slice(0, LINE_MOVES)));
+  }
+
+  function leaveLine() {
+    setAutoplay(false);
+    setCursor(closeLine);
   }
 
   function togglePlay() {
     setAutoplay(!playing);
     // Já avança ao começar; no fim da partida, recomeça do primeiro lance.
-    if (!playing) setIndex(index === last ? 1 : index + 1);
+    if (!playing) moveTo(index === last ? 1 : index + 1);
   }
 
   function toggleMuted() {
@@ -82,6 +122,10 @@ export function Review({ review, notice, onBack }: Props) {
     // Confirma na hora que o som voltou.
     if (muted) void playSounds(["move"]);
   }
+
+  /** O resumo é da partida: some ao abrir uma variante. */
+  const atSummary = index === 0 && !line;
+  const result = index !== last ? null : line ? lineResult(fenAt(game, index)) : gameResult(review);
 
   const actions = (
     <>
@@ -117,34 +161,67 @@ export function Review({ review, notice, onBack }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="mx-auto flex w-full max-w-[min(100%,calc(100vh-5.25rem))] min-w-0 flex-col gap-3 max-lg:max-w-xl">
-          <BoardFrame review={review} index={index} flipped={flipped} actions={actions} />
-          {index > 0 && <div className="lg:hidden">{controls}</div>}
+          <BoardFrame
+            game={game}
+            known={known}
+            index={index}
+            clockGame={review.game}
+            clockIndex={line ? Math.min(index, line.base) : index}
+            flipped={flipped}
+            result={result}
+            onMove={play}
+            onDragStart={() => setAutoplay(false)}
+            actions={actions}
+          />
+          {!atSummary && <div className="lg:hidden">{controls}</div>}
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
           <header className="flex min-h-12 items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-xl font-semibold">Revisão da partida</h1>
-              {review.opening && <p className="text-sm text-soft">{review.opening}</p>}
-            </div>
+            <h1 className="min-w-0 text-xl font-semibold">Revisão da partida</h1>
             <div className="shrink-0 max-lg:hidden">
               <BackButton onClick={onBack} />
             </div>
           </header>
-          {/* Altura do resumo: os controles não mudam de lugar ao iniciar a partida. */}
-          <div className="flex flex-col gap-4 lg:min-h-[33.5625rem]">
+          {/* Altura do resumo, com a abertura em duas linhas: os controles não mudam de lugar ao iniciar a partida. */}
+          <div className="flex flex-col gap-3 lg:min-h-[33.5rem]">
             {/* O resumo só aparece antes do primeiro lance. */}
-            {index === 0 ? (
-              <Summary review={review} onSelect={goTo} />
+            {atSummary ? (
+              <Summary review={review} onSelect={goToGame} />
             ) : (
               <>
-                <MoveDetail review={review} index={index} flipped={flipped} />
-                <MoveList review={review} index={index} flipped={flipped} onSelect={goTo} />
-                <EvalGraph review={review} index={index} onSelect={goTo} />
+                {index === 0 ? (
+                  <StartDetail review={review} onMount={(engineLine) => mount(0, engineLine)} />
+                ) : known.plies[index - 1] ? (
+                  <MoveDetail
+                    review={known}
+                    index={index}
+                    onMount={(engineLine) => mount(index - 1, engineLine)}
+                  />
+                ) : (
+                  <PendingDetail ply={game.plies[index - 1]} error={error} onRetry={retry} />
+                )}
+                {line && (
+                  <LinePanel
+                    review={review}
+                    line={line}
+                    known={known}
+                    index={index}
+                    onSelect={goTo}
+                    onClose={leaveLine}
+                  />
+                )}
+                <MoveList
+                  review={review}
+                  index={line && index > line.base ? null : index}
+                  flipped={flipped}
+                  onSelect={goToGame}
+                />
+                {!line && <EvalGraph review={review} index={index} onSelect={goTo} />}
               </>
             )}
           </div>
-          {index === 0 ? (
+          {atSummary ? (
             <button
               type="button"
               onClick={() => goTo(1)}

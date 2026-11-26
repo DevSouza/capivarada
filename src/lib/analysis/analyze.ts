@@ -34,7 +34,8 @@ export type OpeningBook = Record<string, string>;
 
 const toEpd = (fen: string) => fen.split(" ").slice(0, 4).join(" ");
 
-function terminalEval(fen: string): PositionEval | null {
+/** Avaliação de uma posição encerrada; null se a partida continua. */
+export function terminalEval(fen: string): PositionEval | null {
   const chess = new Chess(fen);
   let score: Score | null = null;
   if (chess.isCheckmate()) score = { kind: "mate", mate: 0, winner: chess.turn() === "w" ? "b" : "w" };
@@ -89,7 +90,11 @@ export async function analyzeGame(
   book: OpeningBook,
   onProgress?: (done: number, total: number) => void,
 ): Promise<GameReview> {
-  const evals = await evaluatePositions(game, searchAll, onProgress);
+  return classifyGame(game, await evaluatePositions(game, searchAll, onProgress), book);
+}
+
+/** Classifica os lances pelas avaliações das posições (uma a mais que os lances). */
+export function classifyGame(game: ParsedGame, evals: PositionEval[], book: OpeningBook): GameReview {
   const opening = matchOpening(game, book);
 
   // 1ª passada: números de cada lance.

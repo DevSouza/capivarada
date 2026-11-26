@@ -22,27 +22,25 @@ export function numberedMove(moveNumber: number, color: Color, san: string): str
 export interface LineMove {
   /** SAN em português. */
   san: string;
-  /** Com o número do lance. */
-  label: string;
-  from: string;
-  to: string;
-  fenAfter: string;
+  /** A mesma, com a peça separada. */
+  parts: ReturnType<typeof splitSan>;
+  color: Color;
 }
 
+/** Quantos lances de uma linha do motor são mostrados e montados como variante. */
+export const LINE_MOVES = 8;
+
 /** Joga uma linha UCI a partir de uma posição; para no primeiro lance ilegal. */
-export function playLine(fen: string, uciMoves: string[], max = 8): LineMove[] {
+export function playLine(fen: string, uciMoves: string[], max = LINE_MOVES): LineMove[] {
   const chess = new Chess(fen);
   const out: LineMove[] = [];
   for (const uci of uciMoves.slice(0, max)) {
-    const moveNumber = chess.moveNumber();
     try {
       const move = chess.move(uci);
       out.push({
         san: sanToPt(move.san),
-        label: numberedMove(moveNumber, move.color, move.san),
-        from: move.from,
-        to: move.to,
-        fenAfter: move.after,
+        parts: splitSan(move.san),
+        color: move.color,
       });
     } catch {
       break;

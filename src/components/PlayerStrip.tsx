@@ -2,20 +2,23 @@
 
 import { Chess } from "chess.js";
 import { materialBalance } from "@/lib/analysis/sacrifice";
-import { capturedBy, clockAt, formatClock, playerName, playerRating } from "@/lib/players";
-import type { Color, GameReview } from "@/lib/types";
+import { capturedBy, formatClock, playerName, playerRating } from "@/lib/players";
+import type { Color, ParsedGame } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { PieceIcon } from "./PieceIcon";
 
 interface Props {
-  review: GameReview;
+  /** Com os lances mostrados, da partida ou da variante. */
+  game: ParsedGame;
   index: number;
   color: Color;
   fen: string;
+  /** Segundos no relógio; null se o PGN não tem relógio. */
+  clock: number | null;
 }
 
-export function PlayerStrip({ review, index, color, fen }: Props) {
-  const { headers, plies } = review.game;
+export function PlayerStrip({ game, index, color, fen, clock }: Props) {
+  const { headers, plies } = game;
   const name = playerName(headers, color);
   const rating = playerRating(headers, color);
   const advantage = materialBalance(new Chess(fen), color);
@@ -32,11 +35,7 @@ export function PlayerStrip({ review, index, color, fen }: Props) {
         </div>
         <Captured pieces={capturedBy(plies, index, color)} color={color === "w" ? "b" : "w"} advantage={advantage} />
       </div>
-      <Clock
-        seconds={clockAt(review.game, index, color)}
-        color={color}
-        active={fen.split(" ")[1] === color}
-      />
+      <Clock seconds={clock} color={color} active={fen.split(" ")[1] === color} />
     </div>
   );
 }

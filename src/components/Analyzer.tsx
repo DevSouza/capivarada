@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnalysisCancelled } from "@/lib/engine/pool";
+import { ownerColor } from "@/lib/gameInfo";
 import { loadAnalysis, saveAnalysis, saveGame } from "@/lib/library";
+import { loadOwner, saveOwner } from "@/lib/owner";
 import { parsePgn, splitGames } from "@/lib/pgn";
+import { knownName } from "@/lib/players";
 import { reviewGame, type Preset } from "@/lib/review";
 import { isCurrent, restoreReview, type SavedGame } from "@/lib/savedGame";
-import type { GameReview, ParsedGame } from "@/lib/types";
+import type { Color, GameReview, ParsedGame } from "@/lib/types";
 import { Home, type ImportOutcome } from "./Home";
+import { OwnerDialog } from "./OwnerDialog";
 import { Progress } from "./Progress";
 import { Review } from "./Review";
 
 type Stage =
   | { name: "home"; error: string | null }
   | { name: "running"; done: number; total: number }
-  | { name: "review"; review: GameReview; notice: string | null };
+  | { name: "review"; review: GameReview; preset: Preset; notice: string | null; flipped: boolean };
 
 const NOT_SAVED = "Não consegui salvar esta partida no navegador. Exporte o PGN se quiser guardá-la.";
 
@@ -30,6 +34,18 @@ async function loadReview(game: ParsedGame, saved: SavedGame): Promise<GameRevie
   } catch {
     return null;
   }
+}
+
+/** A primeira partida que dá para ler. */
+function firstGame(pgns: string[]): ParsedGame | null {
+  for (const pgn of pgns) {
+    try {
+      return parsePgn(pgn);
+    } catch {
+      // As falhas são contadas na importação.
+    }
+  }
+  return null;
 }
 
 /** Salva várias partidas na lista, sem analisar. */
@@ -57,12 +73,32 @@ async function importMany(pgns: string[], onProgress: (message: string) => void)
 export function Analyzer() {
   const [preset, setPreset] = useState<Preset>("normal");
   const [stage, setStage] = useState<Stage>({ name: "home", error: null });
+  const [owner, setOwner] = useState(loadOwner);
+  /** Pergunta em aberto: quem é o usuário nesta partida. */
+  const [question, setQuestion] = useState<{ headers: ParsedGame["headers"]; answer: (side: Color | null) => void } | null>(
+    null,
+  );
   const controller = useRef<AbortController | null>(null);
 
   useEffect(() => () => controller.current?.abort(), []);
 
+  /** O lado do usuário na partida; pergunta enquanto não souber o nome dele. */
+  async function identify({ headers }: ParsedGame): Promise<Color | null> {
+    if (owner) return ownerColor(headers, owner);
+    // Sem nomes, a resposta não serviria para as próximas.
+    if (!knownName(headers, "w") && !knownName(headers, "b")) return null;
+    const side = await new Promise<Color | null>((answer) => setQuestion({ headers, answer }));
+    setQuestion(null);
+    const name = side && knownName(headers, side)?.toLowerCase();
+    if (name) {
+      saveOwner(name);
+      setOwner(name);
+    }
+    return side;
+  }
+
   /** Mostra a análise guardada da partida ou faz uma nova. */
-  async function open(parsed: ParsedGame, canReuse: (saved: SavedGame) => boolean) {
+  async function open(parsed: ParsedGame, side: Color | null, canReuse: (saved: SavedGame) => boolean) {
     controller.current?.abort();
     const abort = new AbortController();
     controller.current = abort;
@@ -78,8 +114,11 @@ export function Analyzer() {
       if (abort.signal.aborted) return;
       const game = saved ? parsePgn(saved.pgn) : parsed;
 
+      // A análise salva pode ter sido feita com outra profundidade.
+      let usedPreset = saved?.analysis?.preset ?? preset;
       let review = saved && canReuse(saved) ? await loadReview(game, saved) : null;
       if (!review) {
+        usedPreset = preset;
         update({ name: "running", done: 0, total: game.plies.length + 1 });
         review = await reviewGame(game, preset, abort.signal, (done, total) =>
           update({ name: "running", done, total }),
@@ -90,7 +129,7 @@ export function Analyzer() {
           });
         }
       }
-      update({ name: "review", review, notice });
+      update({ name: "review", review, preset: usedPreset, notice, flipped: side === "b" });
     } catch (error) {
       if (error instanceof AnalysisCancelled) return;
       update({ name: "home", error: messageOf(error) });
@@ -99,7 +138,11 @@ export function Analyzer() {
 
   async function importText(text: string, onProgress: (message: string) => void): Promise<ImportOutcome> {
     const pgns = splitGames(text);
-    if (pgns.length > 1) return importMany(pgns, onProgress);
+    if (pgns.length > 1) {
+      const first = firstGame(pgns);
+      if (first) await identify(first);
+      return importMany(pgns, onProgress);
+    }
     let game: ParsedGame;
     try {
       game = parsePgn(text);
@@ -107,7 +150,7 @@ export function Analyzer() {
       return { error: messageOf(error) };
     }
     // Colar de novo com outra profundidade refaz a análise; abrir da lista, não.
-    await open(game, (saved) => saved.analysis?.preset === preset);
+    await open(game, await identify(game), (saved) => saved.analysis?.preset === preset);
     return {};
   }
 
@@ -118,15 +161,27 @@ export function Analyzer() {
 
   if (stage.name === "running") return <Progress done={stage.done} total={stage.total} onCancel={backHome} />;
   if (stage.name === "review") {
-    return <Review review={stage.review} notice={stage.notice} onBack={backHome} />;
+    return (
+      <Review
+        review={stage.review}
+        preset={stage.preset}
+        notice={stage.notice}
+        startFlipped={stage.flipped}
+        onBack={backHome}
+      />
+    );
   }
   return (
-    <Home
-      preset={preset}
-      error={stage.error}
-      onPresetChange={setPreset}
-      onImport={importText}
-      onOpen={(saved) => open(parsePgn(saved.pgn), () => true)}
-    />
+    <>
+      <Home
+        chosenOwner={owner}
+        preset={preset}
+        error={stage.error}
+        onPresetChange={setPreset}
+        onImport={importText}
+        onOpen={(saved, player) => open(parsePgn(saved.pgn), ownerColor(saved.headers, player), () => true)}
+      />
+      {question && <OwnerDialog headers={question.headers} onChoose={question.answer} />}
+    </>
   );
 }

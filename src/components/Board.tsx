@@ -4,20 +4,29 @@ import { Chess } from "chess.js";
 import type { ReactNode } from "react";
 import { Chessboard, type Arrow } from "react-chessboard";
 import type { GameResult } from "@/lib/players";
-import type { Color, ReviewedPly } from "@/lib/types";
+import type { Classification, Color, Ply } from "@/lib/types";
 import { Badge, CLASS_META } from "./Badge";
+import { PromotionPicker } from "./PromotionPicker";
 import { ResultBadge } from "./ResultBadge";
+import { useBoardMoves } from "./useBoardMoves";
 import { useBoardNotes } from "./useBoardNotes";
 
 interface Props {
   fen: string;
-  ply: ReviewedPly | null;
+  ply: Ply | null;
+  /** null enquanto o lance não foi analisado. */
+  classification: Classification | null;
   /** Melhor lance do motor na posição anterior ao lance mostrado. */
   bestMove?: string;
   flipped: boolean;
   /** Só na última posição: marca os reis com o resultado. */
   result: GameResult | null;
+  onMove: (uci: string) => void;
+  onDragStart: () => void;
 }
+
+/** Casas de um lance ainda sem classificação. */
+const PENDING_COLOR = "#8a95a8";
 
 /** Selo no canto superior direito da casa, sem sair do tabuleiro nas bordas. */
 function SquareMark({ square, flipped, children }: { square: string; flipped: boolean; children: ReactNode }) {
@@ -38,10 +47,11 @@ function SquareMark({ square, flipped, children }: { square: string; flipped: bo
 /** Duas setas iguais se sobreporiam com a mesma chave. */
 const isSameArrow = (a: Arrow, b: Arrow) => a.startSquare === b.startSquare && a.endSquare === b.endSquare;
 
-export function Board({ fen, ply, bestMove, flipped, result }: Props) {
+export function Board({ fen, ply, classification, bestMove, flipped, result, onMove, onDragStart }: Props) {
+  const moves = useBoardMoves(fen, onMove, onDragStart);
   const notes = useBoardNotes(fen);
-  const highlight = ply && { backgroundColor: `${CLASS_META[ply.classification].color}99` };
-  const showArrow = ply && bestMove && bestMove !== ply.uci && ply.classification !== "book";
+  const highlight = ply && { backgroundColor: `${classification ? CLASS_META[classification].color : PENDING_COLOR}99` };
+  const showArrow = ply && classification && bestMove && bestMove !== ply.uci && classification !== "book";
 
   const engineArrows: Arrow[] = showArrow
     ? [{ startSquare: bestMove.slice(0, 2), endSquare: bestMove.slice(2, 4), color: CLASS_META.best.color }]
@@ -61,7 +71,6 @@ export function Board({ fen, ply, bestMove, flipped, result }: Props) {
           id: "review",
           position: fen,
           boardOrientation: flipped ? "black" : "white",
-          allowDragging: false,
           allowDrawingArrows: false,
           animationDurationInMs: 150,
           // As coordenadas ficam fora do tabuleiro (BoardFrame).
@@ -72,14 +81,16 @@ export function Board({ fen, ply, bestMove, flipped, result }: Props) {
           squareStyles: {
             ...(ply && highlight && { [ply.from]: highlight, [ply.to]: highlight }),
             ...notes.squareStyles,
+            ...moves.squareStyles,
           },
           arrows: [...engineArrows, ...notes.arrows.filter((arrow) => !engineArrows.some((own) => isSameArrow(own, arrow)))],
           ...notes.handlers,
+          ...moves.handlers,
         }}
       />
-      {ply && !kings.some(({ square }) => square === ply.to) && (
+      {ply && classification && !kings.some(({ square }) => square === ply.to) && (
         <SquareMark square={ply.to} flipped={flipped}>
-          <Badge kind={ply.classification} size="100%" />
+          <Badge kind={classification} size="100%" />
         </SquareMark>
       )}
       {result &&
@@ -88,6 +99,9 @@ export function Board({ fen, ply, bestMove, flipped, result }: Props) {
             <ResultBadge result={result} color={color} />
           </SquareMark>
         ))}
+      {moves.promotion && (
+        <PromotionPicker square={moves.promotion.to} flipped={flipped} onChoose={moves.promote} />
+      )}
     </div>
   );
 }

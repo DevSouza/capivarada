@@ -80,9 +80,8 @@ describe("notação", () => {
     const start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     const line = playLine(start, ["e2e4", "e7e5", "g1f3"]);
     expect(line.map((move) => move.san)).toEqual(["e4", "e5", "Cf3"]);
-    expect(line.map((move) => move.label)).toEqual(["1. e4", "1… e5", "2. Cf3"]);
-    expect(line[2]).toMatchObject({ from: "g1", to: "f3" });
-    expect(line[0].fenAfter).toContain("/4P3/");
+    expect(line.map((move) => move.color)).toEqual(["w", "b", "w"]);
+    expect(line[2].parts).toEqual({ piece: "N", rest: "f3" });
     expect(playLine(start, ["e2e4", "e2e4"])).toHaveLength(1);
     expect(playLine(start, ["e2e4", "e7e5", "g1f3"], 1)).toHaveLength(1);
   });

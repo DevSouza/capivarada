@@ -24,6 +24,12 @@ análise (`src/lib/library.ts`). Ao mudar limiares ou fórmulas, aumente
 `ANALYSIS_VERSION` em `src/lib/savedGame.ts` para as análises antigas serem
 refeitas ao abrir.
 
+## Variantes
+
+Na revisão, mover uma peça no tabuleiro (arrastando ou clicando) abre uma variante. Cada
+lance dela é analisado com a profundidade da partida e classificado pelas mesmas regras.
+Variantes não são salvas: existem até voltar à partida.
+
 ## Como classifica
 
 Imprecisão, Erro e Capivara usam os cortes do Lichess (0,05, 0,10 e 0,15 pontos
