@@ -1,13 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { KnownReview } from "@/lib/deepen";
 import { fenAt } from "@/lib/line";
 import { clockAt, type GameResult } from "@/lib/players";
 import type { Color, ParsedGame } from "@/lib/types";
 import { Board } from "./Board";
 import { EvalBar } from "./EvalBar";
 import { PlayerStrip } from "./PlayerStrip";
-import type { KnownReview } from "./useLineReview";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -65,7 +65,7 @@ export function BoardFrame(props: Props) {
         fen={fen}
         ply={ply}
         classification={known.plies[index - 1]?.classification ?? null}
-        bestMove={known.evals[index - 1]?.lines[0]?.move}
+        bestMove={known.before[index - 1]?.lines[0]?.move}
         flipped={flipped}
         result={props.result}
         onMove={(uci) => props.onMove(fen, uci)}

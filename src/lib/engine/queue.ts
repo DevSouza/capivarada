@@ -20,7 +20,7 @@ interface Events {
 /** Buscas sob demanda. Os motores só são criados quando há o que buscar. */
 export class SearchQueue {
   private queue: QueuedSearch[] = [];
-  private readonly running = new Set<string>();
+  private readonly running = new Map<string, { engine: Engine | null }>();
   private readonly engines = new Set<Engine>();
   private readonly idle: Engine[] = [];
   private closed = false;
@@ -31,8 +31,19 @@ export class SearchQueue {
     private readonly events: Events,
   ) {}
 
-  /** Troca o que falta buscar; o que já está rodando continua e também é entregue. */
-  replace(searches: QueuedSearch[]): void {
+  /**
+   * Troca o que falta buscar. O que já está rodando continua e também é entregue; com
+   * `abandon`, é interrompido se não estiver mais na lista.
+   */
+  replace(searches: QueuedSearch[], { abandon = false } = {}): void {
+    if (abandon) {
+      const wanted = new Set(searches.map(({ key }) => key));
+      for (const [key, { engine }] of this.running) {
+        if (wanted.has(key)) continue;
+        this.running.delete(key);
+        this.discard(engine);
+      }
+    }
     this.queue = searches.filter(({ key }) => !this.running.has(key));
     while (!this.closed && this.running.size < this.size) {
       const next = this.queue.shift();
@@ -42,31 +53,37 @@ export class SearchQueue {
   }
 
   private async run({ key, request }: QueuedSearch): Promise<void> {
-    this.running.add(key);
-    let engine = this.idle.pop();
+    const entry = { engine: this.idle.pop() ?? null };
+    this.running.set(key, entry);
+    const isCurrent = () => !this.closed && this.running.get(key) === entry;
     try {
+      let engine = entry.engine;
       if (!engine) {
-        engine = this.createEngine();
+        engine = entry.engine = this.createEngine();
         this.engines.add(engine);
         await engine.init();
       }
       const result = await engine.search(request);
+      if (!isCurrent()) return;
       this.running.delete(key);
-      if (this.closed) return;
       this.idle.push(engine);
       this.replace(this.queue);
       this.events.onResult(key, result);
     } catch (error) {
+      // Interrompida de propósito: não é falha.
+      if (!isCurrent()) return;
       this.running.delete(key);
       // Um motor que falhou não volta; o próximo pedido cria outro.
-      if (engine) {
-        this.engines.delete(engine);
-        engine.terminate();
-      }
-      if (this.closed) return;
+      this.discard(entry.engine);
       this.queue = [];
       this.events.onError(error instanceof Error ? error : new Error(String(error)));
     }
+  }
+
+  private discard(engine: Engine | null): void {
+    if (!engine) return;
+    this.engines.delete(engine);
+    engine.terminate();
   }
 
   terminate(): void {

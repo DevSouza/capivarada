@@ -54,10 +54,10 @@ export function Summary({ review, onSelect }: Props) {
           );
           return (
             <tr key={kind} className="text-center">
-              <td className="py-px">
+              <td className="py-0.5">
                 <Count review={review} kind={kind} color="w" onSelect={onSelect} />
               </td>
-              <th scope="row" className="py-px font-normal">
+              <th scope="row" className="py-0.5 font-normal">
                 {first ? (
                   <button
                     type="button"
@@ -71,7 +71,7 @@ export function Summary({ review, onSelect }: Props) {
                   <span className="flex h-10 items-center gap-3 px-2 text-left text-muted">{name}</span>
                 )}
               </th>
-              <td className="py-px">
+              <td className="py-0.5">
                 <Count review={review} kind={kind} color="b" onSelect={onSelect} />
               </td>
             </tr>

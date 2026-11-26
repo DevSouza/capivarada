@@ -1,9 +1,10 @@
+import type { KnownReview } from "@/lib/deepen";
 import { formatScore, numberedMove, playLine } from "@/lib/notation";
 import type { Classification, EngineLine, GameReview, Ply } from "@/lib/types";
 import { Badge, CLASS_META } from "./Badge";
 import { Detective } from "./Detective";
 import { EngineLines } from "./EngineLines";
-import type { KnownReview } from "./useLineReview";
+import type { Deepening } from "./useReviewAnalysis";
 
 const COMMENT: Record<Classification, string> = {
   brilliant: "Um sacrifício que funciona.",
@@ -23,9 +24,10 @@ interface Props {
   index: number;
   /** Monta como variante uma linha do motor, que parte da posição anterior ao lance. */
   onMount: (line: EngineLine) => void;
+  deepening: Deepening;
 }
 
-const PANEL = "rounded-lg bg-panel p-4 lg:min-h-50";
+const PANEL = "rounded-lg bg-panel p-4 lg:min-h-58";
 
 interface PendingProps {
   ply: Ply;
@@ -64,19 +66,19 @@ export function PendingDetail({ ply, error, onRetry }: PendingProps) {
 
 /** Início da variante que sai da posição inicial. */
 export function StartDetail({ review, onMount }: { review: GameReview; onMount: (line: EngineLine) => void }) {
-  const { lines } = review.evals[0];
+  const { lines, depth } = review.evals[0];
   return (
     <section aria-live="polite" className={PANEL}>
       <p className="font-semibold">Posição inicial</p>
-      <EngineLines fen={review.game.startFen} lines={lines} played="" onMount={onMount} />
+      <EngineLines fen={review.game.startFen} lines={lines} depth={depth} played="" onMount={onMount} />
     </section>
   );
 }
 
 /** O lance que levou à posição `index` (a partir de 1). */
-export function MoveDetail({ review, index, onMount }: Props) {
+export function MoveDetail({ review, index, onMount, deepening }: Props) {
   const ply = review.plies[index - 1];
-  const before = review.evals[index - 1];
+  const before = review.before[index - 1];
   const best = before.lines[0];
   const playedBest = best?.move === ply.uci;
   const bestMove = best && playLine(ply.fenBefore, best.pv, 1)[0]?.san;
@@ -105,7 +107,14 @@ export function MoveDetail({ review, index, onMount }: Props) {
         )}
       </p>
       {before.lines.length > 0 && (
-        <EngineLines fen={ply.fenBefore} lines={before.lines} played={ply.uci} onMount={onMount} />
+        <EngineLines
+          fen={ply.fenBefore}
+          lines={before.lines}
+          depth={before.depth}
+          played={ply.uci}
+          onMount={onMount}
+          deepening={deepening}
+        />
       )}
     </section>
   );

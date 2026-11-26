@@ -18,7 +18,7 @@ import { MoveDetail, PendingDetail, StartDetail } from "./MoveDetail";
 import { MoveList } from "./MoveList";
 import { SoundButton } from "./SoundButton";
 import { Summary } from "./Summary";
-import { useLineReview } from "./useLineReview";
+import { useReviewAnalysis } from "./useReviewAnalysis";
 
 const AUTOPLAY_MS = 1000;
 
@@ -38,7 +38,7 @@ export function Review({ review, preset, notice, startFlipped, onBack }: Props) 
   /** A partida com os lances mostrados: os dela ou os da variante. */
   const game = useMemo(() => withLine(review.game, line), [review, line]);
   const last = game.plies.length;
-  const { known, error, retry } = useLineReview(review, preset, line);
+  const { known, gameReview, error, retry, deepening } = useReviewAnalysis(review, preset, line, index);
   const [flipped, setFlipped] = useState(startFlipped);
 
   const [autoplay, setAutoplay] = useState(false);
@@ -184,10 +184,10 @@ export function Review({ review, preset, notice, startFlipped, onBack }: Props) 
             </div>
           </header>
           {/* Altura do resumo, com a abertura em duas linhas: os controles não mudam de lugar ao iniciar a partida. */}
-          <div className="flex flex-col gap-3 lg:min-h-[33.5rem]">
+          <div className="flex flex-col gap-3 lg:min-h-[35rem]">
             {/* O resumo só aparece antes do primeiro lance. */}
             {atSummary ? (
-              <Summary review={review} onSelect={goToGame} />
+              <Summary review={gameReview} onSelect={goToGame} />
             ) : (
               <>
                 {index === 0 ? (
@@ -197,6 +197,7 @@ export function Review({ review, preset, notice, startFlipped, onBack }: Props) 
                     review={known}
                     index={index}
                     onMount={(engineLine) => mount(index - 1, engineLine)}
+                    deepening={deepening}
                   />
                 ) : (
                   <PendingDetail ply={game.plies[index - 1]} error={error} onRetry={retry} />
@@ -212,12 +213,12 @@ export function Review({ review, preset, notice, startFlipped, onBack }: Props) 
                   />
                 )}
                 <MoveList
-                  review={review}
+                  review={gameReview}
                   index={line && index > line.base ? null : index}
                   flipped={flipped}
                   onSelect={goToGame}
                 />
-                {!line && <EvalGraph review={review} index={index} onSelect={goTo} />}
+                {!line && <EvalGraph review={gameReview} index={index} onSelect={goTo} />}
               </>
             )}
           </div>

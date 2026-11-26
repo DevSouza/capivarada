@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { KnownReview } from "@/lib/deepen";
 import { formatScore, numberedMove } from "@/lib/notation";
 import type { Line } from "@/lib/line";
 import type { GameReview } from "@/lib/types";
 import { Badge } from "./Badge";
 import { MoveSan } from "./MoveSan";
-import type { KnownReview } from "./useLineReview";
 
 interface Props {
   review: GameReview;

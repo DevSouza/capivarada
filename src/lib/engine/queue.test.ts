@@ -75,6 +75,27 @@ describe("SearchQueue", () => {
     expect(onResult).toHaveBeenCalledWith("a", RESULT);
   });
 
+  it("com abandon, interrompe o que saiu da lista e segue com o resto", async () => {
+    const { queue, pending, engines, onError, onResult, settle } = setup(1);
+    queue.replace([search("a")]);
+    await settle();
+    const abandoned = pending.get("a")!;
+    queue.replace([search("b")], { abandon: true });
+    abandoned.reject(new Error("Motor encerrado."));
+    await settle();
+    expect(engines[0].terminate).toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+
+    // Pedida de novo logo depois de abandonada, roda normalmente.
+    queue.replace([search("b"), search("a")], { abandon: true });
+    pending.get("b")!.resolve();
+    await settle();
+    pending.get("a")!.resolve();
+    await settle();
+    expect(onResult.mock.calls.map(([key]) => key)).toEqual(["b", "a"]);
+    expect(engines).toHaveLength(2);
+  });
+
   it("encerrada, não avisa mais nada", async () => {
     const { queue, pending, engines, onError, onResult, settle } = setup(1);
     queue.replace([search("a")]);

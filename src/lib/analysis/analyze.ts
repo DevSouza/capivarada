@@ -153,21 +153,22 @@ export function classifyGame(game: ParsedGame, evals: PositionEval[], book: Open
     accuracy: moveAccuracy(drops[i]),
   }));
 
+  return { game, plies, evals, ...summarize(plies, evals), opening: opening.name };
+}
+
+/** Contagem e precisão de cada jogador. */
+export function summarize(plies: ReviewedPly[], evals: PositionEval[]): Pick<GameReview, "counts" | "accuracy"> {
   const emptyCounts = () =>
     Object.fromEntries([...CLASSIFICATIONS, "forced"].map((name) => [name, 0])) as Record<Classification, number>;
   const counts = { w: emptyCounts(), b: emptyCounts() };
   for (const ply of plies) counts[ply.color][ply.classification]++;
 
   return {
-    game,
-    plies,
-    evals,
+    counts,
     accuracy: gameAccuracy(
       // Teoria e lance único não medem a qualidade de quem jogou.
       plies.map((ply) => ({ ...ply, counts: ply.classification !== "book" && ply.classification !== "forced" })),
       evals.map((value) => winPercent(value.score)),
     ),
-    counts,
-    opening: opening.name,
   };
 }

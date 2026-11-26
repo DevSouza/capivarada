@@ -77,21 +77,33 @@ export function closeLine({ index, line }: Cursor): Cursor {
   return { index: line ? Math.min(index, line.base) : index, line: null };
 }
 
-export interface LineSearch {
+export interface PositionSearch {
   /** Identifica a posição pelos lances que levaram a ela. */
   key: string;
   fen: string;
   job: SearchJob;
 }
 
+const movesTo = (game: ParsedGame, index: number) => game.plies.slice(0, index).map((ply) => ply.uci);
+
+export function positionKey(game: ParsedGame, index: number): string {
+  return movesTo(game, index).join(" ");
+}
+
+export function positionSearch(game: ParsedGame, index: number, multiPv: number): PositionSearch {
+  const fen = fenAt(game, index);
+  const turn = fen.split(" ")[1] as Color;
+  return {
+    key: positionKey(game, index),
+    fen,
+    job: { startFen: game.startFen, moves: movesTo(game, index), turn, multiPv },
+  };
+}
+
 /** As posições da variante, na ordem. A de onde ela parte já foi analisada com a partida. */
-export function lineSearches(game: ParsedGame, line: Line, multiPv: number): LineSearch[] {
-  const ucis = withLine(game, line).plies.map((ply) => ply.uci);
-  return line.plies.map(({ fenAfter }, i) => {
-    const moves = ucis.slice(0, line.base + i + 1);
-    const turn = fenAfter.split(" ")[1] as Color;
-    return { key: moves.join(" "), fen: fenAfter, job: { startFen: game.startFen, moves, turn, multiPv } };
-  });
+export function lineSearches(game: ParsedGame, line: Line, multiPv: number): PositionSearch[] {
+  const whole = withLine(game, line);
+  return line.plies.map((_, i) => positionSearch(whole, line.base + i + 1, multiPv));
 }
 
 /** Resultado quando a variante chegou a uma posição encerrada. */
