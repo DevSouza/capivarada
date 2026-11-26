@@ -44,6 +44,28 @@ button:not(:disabled) {
   animation: piece-move 400ms ease-in-out 150ms backwards;
 }
 
+/* Capivara com a lupa: a faixa de peças passa e se repete sem emenda. */
+@keyframes conveyor {
+  to {
+    transform: translateX(var(--shift));
+  }
+}
+
+.conveyor {
+  animation: conveyor 9s linear infinite;
+}
+
+@keyframes sniff {
+  to {
+    transform: translateY(0.25em) rotate(0.8deg);
+  }
+}
+
+.sniff {
+  transform-origin: 20% 90%;
+  animation: sniff 700ms ease-in-out infinite alternate;
+}
+
 /* ---------- Landing ---------- */
 
 @keyframes rise {

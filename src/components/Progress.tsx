@@ -1,6 +1,9 @@
+import { Detective } from "./Detective";
+
 export function Progress({ done, total, onCancel }: { done: number; total: number; onCancel: () => void }) {
   return (
-    <section className="mx-auto flex max-w-md flex-col gap-4 pt-24 text-center">
+    <section className="mx-auto flex max-w-md flex-col gap-4 pt-16 text-center">
+      <Detective size={300} />
       <h1 className="text-xl font-semibold">Analisando a partida</h1>
       <progress
         value={done}
