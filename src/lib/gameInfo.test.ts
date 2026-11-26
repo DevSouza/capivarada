@@ -86,6 +86,16 @@ describe("informações da partida", () => {
     expect(sortGames([old, early, undated, late])).toEqual([undated, late, early, old]);
   });
 
+  it("usa a hora do fim quando só ela existe, não a ordem em que foram salvas", () => {
+    const at = (EndTime: string, addedAt: number) => saved({ Date: "2026.11.20", EndTime }, addedAt);
+    const morning = at("9:30:00 GMT+0000", 3);
+    const afternoon = at("15:00:00 GMT+0000", 2);
+    const night = at("19:00:00 GMT-0300", 1);
+    expect(sortGames([morning, night, afternoon])).toEqual([night, afternoon, morning]);
+    expect(playedAt({ Date: "2026.11.20", EndTime: "19:00:00 GMT-0300" })).toBe(Date.UTC(2026, 10, 20, 22));
+    expect(playedAt({ Date: "2026.11.20", EndTime: "?" })).toBe(Date.UTC(2026, 10, 20));
+  });
+
   it("descobre o dono da lista só quando dá para saber", () => {
     const a = saved({ White: "Eu", Black: "Ana" });
     const b = saved({ White: "Beto", Black: "eu" });

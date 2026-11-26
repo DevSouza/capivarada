@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { playerName, type GameResult } from "./players";
+import { playerName, RESIGNATION, type GameResult } from "./players";
 import type { SavedGame } from "./savedGame";
 import type { Color } from "./types";
 
@@ -25,7 +25,7 @@ export function timeControlLabel(headers: Headers): string | null {
 
 const ENDINGS: [RegExp, string][] = [
   [/checkmate|xeque-mate/i, "Xeque-mate"],
-  [/resign|desist/i, "Desistência"],
+  [RESIGNATION, "Desistência"],
   [/timeout vs|time ?out.*insufficient|tempo.*insuficiente/i, "Tempo × material insuficiente"],
   [/on time|time forfeit|timeout|tempo/i, "Tempo esgotado"],
   [/abandon/i, "Abandono"],
@@ -82,13 +82,12 @@ export function playedAt(headers: Headers): number | null {
   const withTime = headers.UTCDate ?? headers.Date ?? "";
   const date = withTime.match(/^(\d{4})\.(\d{2})\.(\d{2})$/);
   if (!date) return null;
-  const time = headers.UTCTime?.match(/^(\d{2}):(\d{2}):(\d{2})$/);
-  const ms = Date.UTC(
-    Number(date[1]),
-    Number(date[2]) - 1,
-    Number(date[3]),
-    ...((time ? time.slice(1).map(Number) : [0, 0, 0]) as [number, number, number]),
+  const time = (headers.UTCTime ?? headers.EndTime)?.match(
+    /^(\d{1,2}):(\d{2}):(\d{2})(?: GMT([+-])(\d{2})(\d{2}))?$/,
   );
+  const [hours, minutes, seconds] = time ? time.slice(1, 4).map(Number) : [0, 0, 0];
+  const offset = time?.[4] ? (Number(time[5]) * 60 + Number(time[6])) * (time[4] === "-" ? -1 : 1) : 0;
+  const ms = Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3]), hours, minutes - offset, seconds);
   return Number.isNaN(ms) ? null : ms;
 }
 

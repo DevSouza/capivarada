@@ -4,9 +4,14 @@ type Headers = Record<string, string>;
 
 const PIECE_ORDER = ["p", "n", "b", "r", "q"];
 
-export function playerName(headers: Headers, color: Color): string {
+/** null se o PGN não diz quem jogou. */
+export function knownName(headers: Headers, color: Color): string | null {
   const name = headers[color === "w" ? "White" : "Black"];
-  return name && name !== "?" ? name : color === "w" ? "Brancas" : "Pretas";
+  return name && name !== "?" ? name : null;
+}
+
+export function playerName(headers: Headers, color: Color): string {
+  return knownName(headers, color) ?? (color === "w" ? "Brancas" : "Pretas");
 }
 
 export function playerRating(headers: Headers, color: Color): string | null {
@@ -43,16 +48,27 @@ export function formatClock(seconds: number): string {
   return `${hours ? `${hours}:${pad(minutes)}` : minutes}:${pad(whole % 60)}${tenths}`;
 }
 
-export type GameResult = { kind: "draw" } | { kind: "win"; winner: Color; checkmate: boolean };
+export type GameResult =
+  | { kind: "draw" }
+  /** `resigned`: quem perdeu desistiu. */
+  | { kind: "win"; winner: Color; checkmate: boolean; resigned?: boolean };
+
+export const RESIGNATION = /resign|desist/i;
+
+/** Só para partida decidida sem mate: aí, o "Normal" do Lichess é desistência. */
+function isResignation({ Termination = "" }: Headers): boolean {
+  return RESIGNATION.test(Termination) || /^normal$/i.test(Termination.trim());
+}
 
 export function gameResult(review: Pick<GameReview, "game" | "evals">): GameResult | null {
   const { score } = review.evals[review.evals.length - 1];
   if (score.kind === "mate" && score.mate === 0) return { kind: "win", winner: score.winner, checkmate: true };
+  const resigned = isResignation(review.game.headers);
   switch (review.game.headers.Result) {
     case "1-0":
-      return { kind: "win", winner: "w", checkmate: false };
+      return { kind: "win", winner: "w", checkmate: false, resigned };
     case "0-1":
-      return { kind: "win", winner: "b", checkmate: false };
+      return { kind: "win", winner: "b", checkmate: false, resigned };
     case "1/2-1/2":
       return { kind: "draw" };
     default:

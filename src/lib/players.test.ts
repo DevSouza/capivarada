@@ -47,14 +47,19 @@ describe("jogadores", () => {
   });
 
   it("identifica o resultado, com o mate na frente do cabeçalho", () => {
-    const at = (Result: string, score: Score) =>
+    const at = (Result: string, score: Score, Termination = "") =>
       gameResult({
-        game: { pgn: "", headers: { Result }, startFen: "", plies: [], warnings: [] },
+        game: { pgn: "", headers: { Result, Termination }, startFen: "", plies: [], warnings: [] },
         evals: [{ score, lines: [], depth: 0 }],
       });
     const even: Score = { kind: "cp", cp: 0 };
     expect(at("*", { kind: "mate", mate: 0, winner: "b" })).toEqual({ kind: "win", winner: "b", checkmate: true });
-    expect(at("1-0", even)).toEqual({ kind: "win", winner: "w", checkmate: false });
+    expect(at("1-0", even)).toEqual({ kind: "win", winner: "w", checkmate: false, resigned: false });
+    const resigned = { kind: "win", winner: "b", checkmate: false, resigned: true };
+    expect(at("0-1", even, "ana won by resignation")).toEqual(resigned);
+    expect(at("0-1", even, "Normal")).toEqual(resigned);
+    expect(at("0-1", even, "Time forfeit")).toEqual({ ...resigned, resigned: false });
+    expect(at("0-1", { kind: "mate", mate: 0, winner: "b" }, "Normal")).not.toHaveProperty("resigned");
     expect(at("1/2-1/2", even)).toEqual({ kind: "draw" });
     expect(at("*", even)).toBeNull();
   });
