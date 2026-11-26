@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { findOwner, joinPgns } from "@/lib/gameInfo";
 import { deleteGames, listGames, setFavorite } from "@/lib/library";
+import type { JobRequest, Jobs } from "@/lib/backgroundJobs";
 import type { Preset } from "@/lib/review";
 import { pgnFileName, type SavedGame } from "@/lib/savedGame";
 import { Brand } from "./Brand";
@@ -26,9 +27,18 @@ interface Props {
   onPresetChange: (preset: Preset) => void;
   onImport: (text: string, onProgress: (message: string) => void) => Promise<ImportOutcome>;
   onOpen: (game: SavedGame, owner: string | null) => void;
+  /** Análises em segundo plano. */
+  background: {
+    jobs: Jobs;
+    /** Muda a cada análise pronta. */
+    revision: number;
+    start: (request: JobRequest) => void;
+    cancel: (ids: string[]) => void;
+  };
 }
 
-export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onOpen }: Props) {
+export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onOpen, background }: Props) {
+  const { revision } = background;
   const [games, setGames] = useState<SavedGame[] | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -53,7 +63,7 @@ export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onO
     return () => {
       active = false;
     };
-  }, [error]);
+  }, [error, revision]);
 
   async function handleImport(text: string, onProgress: (message: string) => void): Promise<string | null> {
     const outcome = await onImport(text, onProgress);
@@ -90,6 +100,7 @@ export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onO
 
   async function removeSelected(ids: string[]) {
     try {
+      background.cancel(ids);
       await deleteGames(ids);
       setGames((list) => list?.filter((game) => !ids.includes(game.id)) ?? null);
       clearSelection();
@@ -197,6 +208,10 @@ export function Home({ chosenOwner, preset, error, onPresetChange, onImport, onO
                 onOpen={() => onOpen(game, owner)}
                 onToggleFavorite={() => toggleFavorite(game)}
                 onToggleSelected={() => toggleSelected(game.id)}
+                defaultPreset={preset}
+                job={background.jobs.get(game.id)}
+                onAnalyze={(target) => background.start({ game, preset: target })}
+                onCancelAnalysis={() => background.cancel([game.id])}
               />
             ))}
           </ul>

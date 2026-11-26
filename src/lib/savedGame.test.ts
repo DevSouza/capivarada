@@ -8,6 +8,7 @@ import {
   restoreReview,
   toSavedAnalysis,
   toSavedGame,
+  typicalDepth,
 } from "./savedGame";
 import type { GameReview } from "./types";
 
@@ -55,6 +56,16 @@ describe("partida salva", () => {
     expect(restoreReview(game, structuredClone(saved))).toEqual(review);
     expect(restoreReview(game, { ...saved, version: ANALYSIS_VERSION - 1 })).toBeNull();
     expect(restoreReview(parsePgn("1. e4"), saved)).toBeNull();
+  });
+
+  it("resume a profundidade sem contar mates e posições encerradas", () => {
+    const at = (depth: number, ended = false) => ({
+      score: { kind: "cp" as const, cp: 0 },
+      lines: ended ? [] : [{ move: "e2e4", pv: ["e2e4"], score: { kind: "cp" as const, cp: 0 } }],
+      depth,
+    });
+    expect(typicalDepth([at(16), at(18), at(17), at(245), at(0, true)])).toBe(18);
+    expect(typicalDepth([at(0, true)])).toBeNull();
   });
 
   it("trata análise de versão antiga como desatualizada", () => {

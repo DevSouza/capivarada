@@ -14,6 +14,7 @@ import { Home, type ImportOutcome } from "./Home";
 import { OwnerDialog } from "./OwnerDialog";
 import { Progress } from "./Progress";
 import { Review } from "./Review";
+import { useBackgroundAnalysis } from "./useBackgroundAnalysis";
 
 type Stage =
   | { name: "home"; error: string | null }
@@ -73,6 +74,7 @@ async function importMany(pgns: string[], onProgress: (message: string) => void)
 export function Analyzer() {
   const [preset, setPreset] = useState<Preset>("normal");
   const [stage, setStage] = useState<Stage>({ name: "home", error: null });
+  const background = useBackgroundAnalysis();
   const [owner, setOwner] = useState(loadOwner);
   /** Pergunta em aberto: quem é o usuário nesta partida. */
   const [question, setQuestion] = useState<{ headers: ParsedGame["headers"]; answer: (side: Color | null) => void } | null>(
@@ -119,6 +121,8 @@ export function Analyzer() {
       let review = saved && canReuse(saved) ? await loadReview(game, saved) : null;
       if (!review) {
         usedPreset = preset;
+        // A mesma análise não precisa rodar duas vezes.
+        if (saved) background.cancel([saved.id]);
         update({ name: "running", done: 0, total: game.plies.length + 1 });
         review = await reviewGame(game, preset, abort.signal, (done, total) =>
           update({ name: "running", done, total }),
@@ -175,6 +179,7 @@ export function Analyzer() {
     <>
       <Home
         chosenOwner={owner}
+        background={background}
         preset={preset}
         error={stage.error}
         onPresetChange={setPreset}

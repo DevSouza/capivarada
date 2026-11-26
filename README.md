@@ -30,6 +30,16 @@ Na revisão, mover uma peça no tabuleiro (arrastando ou clicando) abre uma vari
 lance dela é analisado com a profundidade da partida e classificado pelas mesmas regras.
 Variantes não são salvas: existem até voltar à partida.
 
+## Profundidade
+
+Na lista, cada partida pode ser refeita na profundidade seguinte (Rápida, Normal,
+Profunda) em segundo plano, uma por vez e com metade dos motores
+(`src/lib/backgroundJobs.ts`). A fila se perde ao fechar a página.
+
+Aumentar a profundidade de um lance refaz só as posições antes e depois dele, com 4
+vezes mais nós a cada clique (`src/lib/deepen.ts`). Os vizinhos não são reclassificados
+e nada disso é salvo.
+
 ## Como classifica
 
 Imprecisão, Erro e Capivara usam os cortes do Lichess (0,05, 0,10 e 0,15 pontos

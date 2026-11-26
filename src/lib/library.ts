@@ -1,7 +1,15 @@
 import { sortGames } from "./gameInfo";
 import { parsePgn } from "./pgn";
 import type { Preset } from "./review";
-import { GAME_SCHEMA, toSavedAnalysis, toSavedGame, type SavedAnalysis, type SavedGame } from "./savedGame";
+import {
+  GAME_SCHEMA,
+  isCurrent,
+  toSavedAnalysis,
+  toSavedGame,
+  typicalDepth,
+  type SavedAnalysis,
+  type SavedGame,
+} from "./savedGame";
 import type { GameReview, ParsedGame } from "./types";
 
 const DB_NAME = "chess-analises";
@@ -94,10 +102,11 @@ export function saveAnalysis(review: GameReview, preset: Preset): Promise<void> 
   return transact("readwrite", (games, analyses) => {
     const analysis = toSavedAnalysis(review);
     const { version, accuracy, opening } = analysis;
+    const depth = typicalDepth(review.evals);
     updateGame(
       games,
       analysis.id,
-      (game) => ({ ...game, analysis: { version, preset, accuracy, opening } }),
+      (game) => ({ ...game, analysis: { version, preset, accuracy, opening, depth } }),
       () => analyses.put(analysis),
     );
   });
@@ -124,6 +133,28 @@ function upgrade(old: SavedGame & { usedAt?: number }): SavedGame | null {
   }
 }
 
+/** Completa a profundidade das análises salvas antes de ela existir na lista. */
+async function fillDepths(list: SavedGame[]): Promise<SavedGame[]> {
+  const missing = list.filter((game) => isCurrent(game.analysis) && game.analysis.depth === undefined);
+  if (missing.length === 0) return list;
+  const filled = await transact<Map<string, SavedGame>>("readwrite", (games, analyses, done) => {
+    const updated = new Map<string, SavedGame>();
+    for (const { id } of missing) {
+      const stored: IDBRequest<SavedAnalysis | undefined> = analyses.get(id);
+      stored.onsuccess = () => {
+        const depth = stored.result ? typicalDepth(stored.result.evals) : null;
+        updateGame(games, id, (game) => {
+          const next = { ...game, analysis: game.analysis && { ...game.analysis, depth } };
+          updated.set(id, next);
+          return next;
+        });
+      };
+    }
+    done(updated);
+  });
+  return list.map((game) => filled.get(game.id) ?? game);
+}
+
 export async function listGames(): Promise<SavedGame[]> {
   const stored = await transact<SavedGame[]>("readonly", (games, _analyses, done) => {
     const request: IDBRequest<SavedGame[]> = games.getAll();
@@ -135,7 +166,9 @@ export async function listGames(): Promise<SavedGame[]> {
       for (const game of upgraded) games.put(game);
     });
   }
-  return sortGames([...stored.filter((game) => game.schema === GAME_SCHEMA), ...upgraded]);
+  const all = [...stored.filter((game) => game.schema === GAME_SCHEMA), ...upgraded];
+  // A profundidade é um extra: sem ela, a lista aparece do mesmo jeito.
+  return sortGames(await fillDepths(all).catch(() => all));
 }
 
 export function deleteGames(ids: string[]): Promise<void> {

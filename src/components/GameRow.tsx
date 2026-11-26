@@ -10,11 +10,14 @@ import {
   scoreOf,
   timeControlLabel,
 } from "@/lib/gameInfo";
+import type { Job } from "@/lib/backgroundJobs";
+import type { Preset } from "@/lib/review";
 import { formatAccuracy } from "@/lib/notation";
 import { playerName, playerRating, type GameResult } from "@/lib/players";
 import { isCurrent, type SavedGame } from "@/lib/savedGame";
 import type { Color } from "@/lib/types";
 import { Avatar } from "./Avatar";
+import { GameDepth } from "./GameDepth";
 import { MiniBoard } from "./MiniBoard";
 
 interface Props {
@@ -24,9 +27,15 @@ interface Props {
   onOpen: () => void;
   onToggleFavorite: () => void;
   onToggleSelected: () => void;
+  defaultPreset: Preset;
+  /** Análise em segundo plano desta partida. */
+  job: Job | undefined;
+  onAnalyze: (preset: Preset) => void;
+  onCancelAnalysis: () => void;
 }
 
-export function GameRow({ game, owner, selected, onOpen, onToggleFavorite, onToggleSelected }: Props) {
+export function GameRow(props: Props) {
+  const { game, owner, selected, onOpen, onToggleFavorite, onToggleSelected } = props;
   const { headers, finalFen } = game;
   const result = resultOf(headers, finalFen);
   const mine = ownerColor(headers, owner);
@@ -102,12 +111,19 @@ export function GameRow({ game, owner, selected, onOpen, onToggleFavorite, onTog
           </div>
         </div>
 
-        <p className="flex flex-wrap gap-x-6 gap-y-1 border-t border-line pt-3 text-xs text-soft">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-3 text-xs text-soft">
           {time && <span className="sm:hidden">{time}</span>}
           {details.map((detail) => (
             <span key={detail}>{detail}</span>
           ))}
-        </p>
+          <GameDepth
+            game={game}
+            defaultPreset={props.defaultPreset}
+            job={props.job}
+            onStart={props.onAnalyze}
+            onCancel={props.onCancelAnalysis}
+          />
+        </div>
       </div>
     </li>
   );

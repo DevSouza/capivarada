@@ -16,6 +16,8 @@ export interface AnalysisSummary {
   preset: Preset;
   accuracy: GameReview["accuracy"];
   opening: string | null;
+  /** Profundidade típica do motor; ausente em análises salvas antes de existir. */
+  depth?: number | null;
 }
 
 /** O que a lista mostra; a análise completa fica à parte, por ser bem maior. */
@@ -73,6 +75,15 @@ export function toSavedGame(game: ParsedGame, addedAt: number): SavedGame {
 
 export function isCurrent(analysis: AnalysisSummary | null): analysis is AnalysisSummary {
   return analysis?.version === ANALYSIS_VERSION;
+}
+
+/** Mediana das posições: um mate encontrado chega a profundidades enormes. */
+export function typicalDepth(evals: GameReview["evals"]): number | null {
+  const depths = evals
+    .filter(({ lines }) => lines.length > 0)
+    .map(({ depth }) => depth)
+    .sort((a, b) => a - b);
+  return depths.length > 0 ? depths[Math.floor(depths.length / 2)] : null;
 }
 
 export function toSavedAnalysis(review: GameReview): SavedAnalysis {

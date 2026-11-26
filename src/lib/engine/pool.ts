@@ -26,6 +26,11 @@ export function defaultPoolSize(): number {
   return poolSize(navigator.hardwareConcurrency || 2, mobile);
 }
 
+/** Metade: deixa o computador livre para o resto da página. */
+export function backgroundPoolSize(): number {
+  return Math.max(1, Math.floor(defaultPoolSize() / 2));
+}
+
 export class EnginePool {
   private constructor(private readonly workers: EngineWorker[]) {}
 
