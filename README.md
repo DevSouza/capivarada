@@ -4,6 +4,16 @@ Análise de partidas de xadrez. Cole um PGN e veja a precisão de cada jogador e
 (Brilhante, Excelente, Livro, Melhor, Bom, Imprecisão, Erro, Chance
 perdida, Capivara). Tudo roda no navegador, sem servidor.
 
+## Prints
+
+![Landing page](docs/prints/landing.png)
+
+![Lista de partidas salvas](docs/prints/partidas.png)
+
+![Resumo da partida com a precisão e a classificação dos lances](docs/prints/resumo.png)
+
+![Revisão lance a lance com as linhas do motor e o gráfico de vantagem](docs/prints/revisao.png)
+
 ## Comandos
 
 - `npm run dev`: desenvolvimento
